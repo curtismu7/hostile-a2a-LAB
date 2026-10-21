@@ -1,10 +1,14 @@
-// Copied from hostile-mcp (web/src/lib/Untrusted.jsx). Not imported across repos.
+// Copied from hostile-mcp (web/src/lib/Untrusted.jsx) and adapted: [U+XXXX] chips render inside Untrusted too, the
+// fake-credential placeholders are highlighted, and Revealed also shows Cyrillic and Greek look-alike letters as code
+// points. Not imported across repos.
 import React from "react";
 
 // Everything the hostile server sends is untrusted by definition. It is only ever rendered as React text nodes
 // (never innerHTML), so markup in a payload is shown, not run. The <mark> highlight is derived from the text by
 // pattern and wraps text nodes only.
-const HOT = /<IMPORTANT>[\s\S]*?<\/IMPORTANT>|ignore (?:all )?(?:previous|prior) instructions[\s\S]*|https?:\/\/[^\s"',]+|[\w.+-]+@[\w.-]+\.[a-z]+/gi;
+const HOT = /<IMPORTANT>[\s\S]*?<\/IMPORTANT>|ignore (?:all )?(?:previous|prior) instructions[\s\S]*|FAKE-[A-Z]+(?:-[A-Z]+)*-NOT-REAL|https?:\/\/[^\s"',]+|[\w.+-]+@[\w.-]+\.[a-z]+/gi;
+const CHIP = /(\[U\+[0-9A-F]{4,6}\])/;
+const LOOKALIKE = /[\p{Script=Cyrillic}\p{Script=Greek}]/gu;
 
 export function segments(text) {
   const s = String(text ?? "");
@@ -19,26 +23,27 @@ export function segments(text) {
   return out;
 }
 
+const chip = (key, text) => <span key={key} className="chip" title="Invisible or look-alike character">{text}</span>;
+
+function pieces(text, highlight) {
+  return String(text ?? "").split(CHIP).flatMap((p, i) => {
+    if (i % 2) return [chip(`c${i}`, p)];
+    if (!highlight) return [<React.Fragment key={`t${i}`}>{p}</React.Fragment>];
+    return segments(p).map((s, j) => (s.hot ? <mark key={`m${i}-${j}`} title="Flagged: instruction, off-box address or credential placeholder">{s.text}</mark> : <React.Fragment key={`t${i}-${j}`}>{s.text}</React.Fragment>));
+  });
+}
+
 /** Inert text with suspicious spans highlighted. Highlight carries a title and the text itself, not colour alone. */
 export function Untrusted({ text, block = false }) {
   const Tag = block ? "pre" : "span";
-  return (
-    <Tag className={`untrusted${block ? " untrusted--block" : ""}`} data-testid="untrusted">
-      {segments(text).map((p, i) => (p.hot ? <mark key={i} title="Flagged: instruction or off-box address">{p.text}</mark> : <React.Fragment key={i}>{p.text}</React.Fragment>))}
-    </Tag>
-  );
+  return <Tag className={`untrusted${block ? " untrusted--block" : ""}`} data-testid="untrusted">{pieces(text, true)}</Tag>;
 }
-
-const CHIP = /(\[U\+[0-9A-F]{4,6}\])/;
 
 /** Text from the server's revealed copy: each [U+XXXX] chip is a visible, styled text node, everything else is inert text. */
 export function Revealed({ text, block = false }) {
   const Tag = block ? "pre" : "span";
-  return (
-    <Tag className={`untrusted${block ? " untrusted--block" : ""}`} data-testid="revealed">
-      {String(text ?? "").split(CHIP).map((p, i) => (i % 2 ? <span key={i} className="chip" title="Invisible or look-alike character">{p}</span> : <React.Fragment key={i}>{p}</React.Fragment>))}
-    </Tag>
-  );
+  const shown = String(text ?? "").replace(LOOKALIKE, (c) => `[U+${c.codePointAt(0).toString(16).toUpperCase().padStart(4, "0")}]`);
+  return <Tag className={`untrusted${block ? " untrusted--block" : ""}`} data-testid="revealed">{pieces(shown, false)}</Tag>;
 }
 
 export const pretty = (value) => JSON.stringify(value, null, 2);

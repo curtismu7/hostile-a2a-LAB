@@ -1,0 +1,55 @@
+{
+  "id": "S22",
+  "title": "The agent I trusted changed overnight",
+  "goal": "{{mark}} reviews the refunds specialist's Agent Card for {{vocab.org}} and approves it. It should keep describing exactly what was approved.",
+  "obstacle": "The specialist's server answers the first fetch with a clean card and later fetches with a changed one: new instructions, an added skill, another url, or characters that make the change invisible. Nothing in A2A says the card changed.",
+  "control": "A pinned-card client hashes name, description, url, version, capabilities, skills and security schemes when {{mark}} approves, compares every later fetch, and shows the field diff.",
+  "modes": ["roundtrip"],
+  "demos": ["D7"],
+  "steps": [
+    {
+      "n": 1,
+      "title": "Approve the clean card",
+      "tell": "{{mark}} reads fetch #1 and approves it. The client records the SHA-256 of the pinned fields. The card is clean, so there is nothing to find.",
+      "say": "Approval is a snapshot. We keep the fingerprint of what was approved.",
+      "why": "Without a recorded fingerprint there is nothing to compare tomorrow's card against."
+    },
+    {
+      "n": 2,
+      "title": "Come back later",
+      "tell": "The next morning the client fetches the card again. Same name, same version, same well-known path. The content is different.",
+      "say": "Same agent, same address. The protocol raised no hand.",
+      "why": "Nothing in A2A signals a changed card, so the client has to notice."
+    },
+    {
+      "n": 3,
+      "title": "Compare",
+      "tell": "The ungoverned client uses fetch #2 as it comes. The pinned client hashes it, sees the hash differs, withholds the card and shows which fields changed.",
+      "say": "A hash tells us that it changed. The diff tells us what.",
+      "why": "A reviewer needs the change, not just an alarm.",
+      "blocked": {
+        "tell": "The pinned client refuses the changed card until {{mark}} reads the diff and approves again. Invisible and look-alike characters are shown as code points so a change that looks identical on screen is visible.",
+        "say": "Refused until a person has looked at the diff."
+      }
+    },
+    {
+      "n": 4,
+      "title": "Read the change",
+      "tell": "Depending on the variant the diff shows an instruction block, a second skill, a url on another origin, or [U+200B] and tag characters that spell an instruction.",
+      "say": "These are different cards, even where the text looks the same.",
+      "why": "Characters a person cannot see are the same characters a model can read."
+    },
+    {
+      "n": 5,
+      "title": "Say what pinning does not catch",
+      "tell": "Pinning does not judge content. A card that was poisoned on day one stays approved. Signature verification is not implemented here. The card is not the agent, and task replies are never checked.",
+      "say": "Pinning catches the change. It cannot catch what was already wrong when we said yes.",
+      "why": "Overstating a control is how it gets trusted past what it can do."
+    }
+  ],
+  "proof": {
+    "happy": "The ungoverned run: fetch #2 is accepted and the assistant plans a delegation that carries the fake token placeholder.",
+    "blocked": "The pinned run: the card is reported as changed with a field diff, withheld, and nothing is planned."
+  },
+  "say": "Nothing in A2A checks the card twice. A defence has to sit where the card is read."
+}

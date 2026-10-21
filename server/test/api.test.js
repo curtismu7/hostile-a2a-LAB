@@ -31,7 +31,7 @@ test('GET /api/health is demo-health/1 and ready', () => withServer(async ({ get
 
 test('GET /api/catalog, /api/safety-scan and /api/victim-rules', () => withServer(async ({ get }) => {
   const cat = await (await get('/api/catalog')).json();
-  assert.equal(cat.items.length, 10);
+  assert.equal(cat.items.length, 11);
   const scan = await (await get('/api/safety-scan')).json();
   assert.deepEqual({ ok: scan.ok, offenders: scan.offenders }, { ok: true, offenders: [] });
   assert.ok(scan.scanned > VARIANT_IDS.length);

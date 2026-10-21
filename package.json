@@ -5,14 +5,23 @@
   "type": "module",
   "description": "Hostile A2A agent demo: a poisoned Agent Card, an offline delegating victim, and a pinned-card client shown side by side with an ungoverned one",
   "license": "MIT",
-  "workspaces": ["server", "web"],
-  "engines": { "node": ">=20" },
+  "workspaces": [
+    "server",
+    "web"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "npm run dev -w server & npm run dev -w web",
     "start": "npm start -w server",
     "test": "npm test -w server && npm test -w web",
     "build": "npm run build -w web",
     "doctor": "node scripts/doctor.mjs",
+    "e2e": "node scripts/e2e.mjs",
     "prepare": "git config core.hooksPath .githooks || true"
+  },
+  "devDependencies": {
+    "playwright": "^1.64.1"
   }
 }
