@@ -140,6 +140,24 @@ test('hostile input: huge, deeply nested and prototype-pollution cards are handl
   assert.equal(diffValues(JSON.parse('{"__proto__":1}'), {}).length, 1);
 });
 
+test('a pinned card replaced by one nested far beyond any default stack is diffed and serialized with bounded depth', () => {
+  const nest = (n, leaf) => { let v = leaf; for (let i = 0; i < n; i++) v = { n: v }; return v; };
+  const arr = (n) => { let v = 'x'; for (let i = 0; i < n; i++) v = [v]; return v; };
+  for (const depth of [10_000, 200_000]) {
+    for (const make of [nest, arr]) {
+      const c = pinned();
+      c.approve({ ...card('clean'), capabilities: make(depth, 'a') }, { origin: FETCH_ORIGIN });
+      const r = c.check({ ...card('clean'), capabilities: make(depth, 'b') }, { origin: FETCH_ORIGIN });
+      assert.ok(r.findings.includes('changed') || r.findings.includes('scanner-finding') || r.verdict);
+      const out = JSON.stringify(r);
+      assert.ok(out.length < 100_000, 'result stays small');
+      assert.ok(JSON.stringify(diffValues({ a: make(depth, 'a') }, { a: make(depth, 'b') })).length < 100_000);
+      assert.ok(JSON.stringify(diffValues({ a: make(depth, 'a') }, { a: 1 })).includes('too deep'));
+      assert.ok(JSON.stringify(diffValues(make(depth, 'a'), 'str')).length < 100_000);
+    }
+  }
+});
+
 test('unicode tricks do not collide: a look-alike description has a different hash', () => {
   const a = card('clean');
   assert.notEqual(cardHash(a), cardHash({ ...a, description: a.description.replace('a', 'а') }));

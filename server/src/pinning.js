@@ -22,8 +22,10 @@ const own = (o, k) => Object.hasOwn(o, k);
 const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
 
 // Sorted keys at every depth, own keys only. Arrays keep their order (skills are sorted by the caller).
+const MAX_DEPTH = 64;
+const TOO_DEEP = '[too deep]';
 export function canonicalize(value, depth = 0) {
-  if (depth > 64) return '[too deep]';
+  if (depth > MAX_DEPTH) return TOO_DEEP;
   if (Array.isArray(value)) return value.map((v) => canonicalize(v, depth + 1));
   if (isObj(value)) return Object.fromEntries(Object.keys(value).sort().map((k) => [k, canonicalize(value[k], depth + 1)]));
   return value;
@@ -55,17 +57,22 @@ export const originOf = (url) => { try { const u = new URL(url); return u.origin
 
 // Field-level difference: [{ path, change: 'added'|'removed'|'changed', before, after, beforeRevealed?, afterRevealed? }].
 // Strings carry a revealed copy so a change that looks identical on screen is visibly different.
-export function diffValues(before, after, path = '') {
+// Depth is bounded like canonicalize: a hostile, deeply nested value is reported as one bounded change, never recursed into.
+export function diffValues(before, after, path = '', depth = 0) {
+  if (depth > MAX_DEPTH) return [{ path, change: 'changed', before: TOO_DEEP, after: TOO_DEEP, beforeRevealed: TOO_DEEP, afterRevealed: TOO_DEEP }];
   if (isObj(before) && isObj(after)) {
     const keys = [...new Set([...Object.keys(before), ...Object.keys(after)])].sort();
-    return keys.flatMap((k) => diffValues(own(before, k) ? before[k] : undefined, own(after, k) ? after[k] : undefined, path ? `${path}.${k}` : k));
+    return keys.flatMap((k) => diffValues(own(before, k) ? before[k] : undefined, own(after, k) ? after[k] : undefined, path ? `${path}.${k}` : k, depth + 1));
   }
   if (Array.isArray(before) && Array.isArray(after) && path === 'skills') return diffSkills(before, after);
   if (JSON.stringify(canonicalize(before)) === JSON.stringify(canonicalize(after))) return [];
-  const entry = before === undefined ? { path, change: 'added', after } : after === undefined ? { path, change: 'removed', before } : { path, change: 'changed', before, after };
+  // Values are canonicalized (depth-bounded) so a deep leaf can never overflow the stack here or when the result is serialized.
+  const b = canonicalize(before);
+  const a = canonicalize(after);
+  const entry = before === undefined ? { path, change: 'added', after: a } : after === undefined ? { path, change: 'removed', before: b } : { path, change: 'changed', before: b, after: a };
   const rev = (v) => (typeof v === 'string' ? visible(v) : JSON.stringify(v));
-  if (before !== undefined) entry.beforeRevealed = rev(before);
-  if (after !== undefined) entry.afterRevealed = rev(after);
+  if (before !== undefined) entry.beforeRevealed = rev(b);
+  if (after !== undefined) entry.afterRevealed = rev(a);
   return [entry];
 }
 
@@ -102,7 +109,7 @@ export function createPinnedCardClient({ requireSignatures = false } = {}) {
 
   function approve(card, { origin }) {
     const scan = scanCard(card);
-    const pin = { origin, sha256: cardHash(card), view: structuredClone(pinnedView(card)) };
+    const pin = { origin, sha256: cardHash(card), view: structuredClone(canonicalize(pinnedView(card))) };
     pins.set(origin, pin);
     // What the scanner said at the moment of approval: approving a flagged card is possible, and visible.
     return { pin: publicPin(pin), scannerFindingsAtApproval: scan.findings.length, note: 'Approval records the card as received. It does not read it.' };
