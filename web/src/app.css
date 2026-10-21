@@ -1,0 +1,37 @@
+/* Theme tokens (copied from hostile-mcp). Light by default, dark by system setting, or forced with data-theme.
+   No purple: outcomes are green, amber and red, always with a word beside the colour. */
+:root {
+  --bg: #f6f7f9; --card: #ffffff; --border: #d5d9e0; --text: #1c2330; --muted: #566074; --accent: #c8102e; --on-accent: #ffffff;
+  --ok: #1a7f37; --ok-wash: #e6f4ea; --hold: #8a5a00; --hold-wash: #fdf1d6; --deny: #b00b0d; --deny-wash: #fde8e8;
+  --mark: #fff0b3; --mark-text: #3d2e00;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12161d; --card: #1a202a; --border: #2f3846; --text: #e6eaf1; --muted: #9aa5b8; --accent: #ff6b7d; --on-accent: #12161d;
+    --ok: #4cc26b; --ok-wash: #10301d; --hold: #e3b341; --hold-wash: #33290d; --deny: #ff7b7b; --deny-wash: #3a1517;
+    --mark: #5a4a00; --mark-text: #fff3c4;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12161d; --card: #1a202a; --border: #2f3846; --text: #e6eaf1; --muted: #9aa5b8; --accent: #ff6b7d; --on-accent: #12161d;
+  --ok: #4cc26b; --ok-wash: #10301d; --hold: #e3b341; --hold-wash: #33290d; --deny: #ff7b7b; --deny-wash: #3a1517;
+  --mark: #5a4a00; --mark-text: #fff3c4;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+.page { max-width: 76rem; margin: 0 auto; padding: 1rem; }
+h1 { margin: 0.5rem 0; font-size: 1.4rem; }
+.muted { color: var(--muted); }
+code { font-family: var(--mono); font-size: 0.85rem; overflow-wrap: anywhere; }
+.banner { padding: 0.5rem 1rem; background: var(--deny-wash); color: var(--deny); border-bottom: 2px solid var(--deny); font-size: 0.9rem; }
+.card { padding: 1rem; margin-bottom: 1rem; border: 1px solid var(--border); border-radius: 10px; background: var(--card); }
+.untrusted { font-family: var(--mono); font-size: 0.85rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.untrusted--block { margin: 0; padding: 0.5rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); }
+.untrusted mark { background: var(--mark); color: var(--mark-text); }
+.chip { padding: 0 0.2rem; border: 1px solid var(--deny); border-radius: 4px; color: var(--deny); background: var(--deny-wash); font-family: var(--mono); font-size: 0.8rem; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 40rem) { .page { padding: 0.75rem 16px; } }

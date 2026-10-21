@@ -1,0 +1,18 @@
+{
+  "name": "hostile-a2a",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Hostile A2A agent demo: a poisoned Agent Card, an offline delegating victim, and a pinned-card client shown side by side with an ungoverned one",
+  "license": "MIT",
+  "workspaces": ["server", "web"],
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "dev": "npm run dev -w server & npm run dev -w web",
+    "start": "npm start -w server",
+    "test": "npm test -w server && npm test -w web",
+    "build": "npm run build -w web",
+    "doctor": "node scripts/doctor.mjs",
+    "prepare": "git config core.hooksPath .githooks || true"
+  }
+}
