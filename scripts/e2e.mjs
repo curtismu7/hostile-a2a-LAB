@@ -118,6 +118,7 @@ try {
 
   // Diagram: drag a box, Simulate with the speed control, Reset puts the box back.
   await go('diagram');
+  await sleep(800); // let fitView settle before measuring
   const node = page.locator('.react-flow__node').filter({ hasText: 'Offline generalist' });
   const before = await node.boundingBox();
   await page.mouse.move(before.x + before.width / 2, before.y + 10);
