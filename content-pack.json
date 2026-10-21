@@ -1,0 +1,188 @@
+{
+  "schema": "demo-content-pack/1",
+  "id": "hostile-a2a",
+  "title": "Hostile A2A agent / poisoned Agent Card",
+  "version": "0.1.0",
+  "demo": {
+    "id": "hostile-a2a",
+    "name": "Hostile A2A",
+    "catalog": "D7",
+    "baseUrl": "http://localhost:4901",
+    "doctor": "/api/health",
+    "tags": [
+      "a2a",
+      "agent-card",
+      "delegation",
+      "card-pinning"
+    ]
+  },
+  "glossary": [
+    {
+      "id": "agent-card",
+      "term": "Agent Card",
+      "definition": "The JSON document an A2A agent publishes at /.well-known/agent-card.json to describe itself: name, description, url, version, capabilities and skills. A delegating agent reads it to choose a specialist. The card is written by the agent being described.",
+      "aliases": [
+        "A2A Agent Card"
+      ]
+    },
+    {
+      "id": "agent-card-poisoning",
+      "term": "Agent-card poisoning",
+      "definition": "Putting instructions in an Agent Card's description or skill text. The delegating agent reads the card as trusted context, and nothing in A2A discovery inspects the text, so it arrives byte for byte.",
+      "aliases": [
+        "card poisoning",
+        "card description injection"
+      ]
+    },
+    {
+      "id": "card-pinning",
+      "term": "Card pinning",
+      "definition": "Recording a hash of an approved card's name, description, url, version, capabilities, skills and security schemes, and flagging any later fetch that differs, with a field diff. It detects change; it does not judge content.",
+      "aliases": [
+        "pinned-card client"
+      ]
+    },
+    {
+      "id": "delegation",
+      "term": "Delegation",
+      "definition": "A generalist agent handing part of a task to a specialist it found through the specialist's card, by sending it a message. What goes in that message is chosen by the generalist, possibly under the influence of the card."
+    },
+    {
+      "id": "generalist",
+      "term": "Generalist",
+      "definition": "The agent that faces the user, picks a specialist from its card and delegates to it. In this demo it is an offline, deterministic stand-in with no model."
+    },
+    {
+      "id": "inter-agent-abuse",
+      "term": "Inter-agent abuse",
+      "definition": "One agent using the trust another agent places in it, through card text, task replies or the work it is handed, to leak data or steer actions. The attacker is another agent, not the user.",
+      "aliases": [
+        "agent-to-agent abuse"
+      ]
+    },
+    {
+      "id": "off-origin-url",
+      "term": "Off-origin url",
+      "definition": "A card whose url field names a different origin than the one the card was fetched from, so a client that follows the url sends its work somewhere it never approved."
+    },
+    {
+      "id": "signed-card",
+      "term": "Signed card (not implemented here)",
+      "definition": "An Agent Card carrying a signature that a client verifies against a key it trusts. This demo does NOT verify card signatures: verifying needs the signer's key and a decision about who may sign, and fetching a key named by the card itself would let the card vouch for itself.",
+      "aliases": [
+        "card signature"
+      ]
+    },
+    {
+      "id": "specialist",
+      "term": "Specialist",
+      "definition": "A remote agent that advertises narrow skills in its card and is given work by a generalist. In this demo the specialist is hostile on purpose: it serves payloads and never blocks."
+    },
+    {
+      "id": "unsigned-card-policy",
+      "term": "Unsigned-card policy",
+      "definition": "A client policy that withholds any card without a signature. In this demo it is a stub that fails closed: with the policy on, an unsigned card is withheld, and no card is ever reported as verified."
+    }
+  ],
+  "sources": [],
+  "cards": [
+    {
+      "id": "diagram",
+      "label": "Diagram",
+      "description": "Specialist, card, pinned client, generalist and the message it would send. Movable boxes, Simulate, Reset.",
+      "group": "concept",
+      "terms": [
+        "agent-card",
+        "delegation"
+      ],
+      "action": {
+        "type": "route",
+        "href": "/#/diagram"
+      }
+    },
+    {
+      "id": "gallery",
+      "label": "Poison gallery",
+      "description": "Every card payload the server can serve, with what the scanner rules and pinning each catch.",
+      "group": "try-it",
+      "terms": [
+        "agent-card",
+        "agent-card-poisoning",
+        "inter-agent-abuse",
+        "specialist"
+      ],
+      "story": "S21",
+      "action": {
+        "type": "route",
+        "href": "/#/gallery"
+      }
+    },
+    {
+      "id": "limits",
+      "label": "Honest limits",
+      "description": "What pinning and the scanner do not catch, and why card signature verification is not implemented here.",
+      "group": "concept",
+      "terms": [
+        "signed-card",
+        "unsigned-card-policy"
+      ],
+      "action": {
+        "type": "route",
+        "href": "/#/limits"
+      }
+    },
+    {
+      "id": "roundtrip",
+      "label": "Card round trip",
+      "description": "Approve fetch 1, fetch again, compare: the agent that changed overnight, with the field diff.",
+      "group": "try-it",
+      "terms": [
+        "card-pinning",
+        "off-origin-url"
+      ],
+      "story": "S22",
+      "action": {
+        "type": "route",
+        "href": "/#/roundtrip"
+      }
+    },
+    {
+      "id": "run",
+      "label": "Run the delegation",
+      "description": "The same task through an ungoverned client and a pinned client, side by side. No model needed; nothing is sent.",
+      "group": "try-it",
+      "terms": [
+        "delegation",
+        "generalist",
+        "card-pinning",
+        "unsigned-card-policy"
+      ],
+      "story": "S21",
+      "action": {
+        "type": "route",
+        "href": "/#/run"
+      }
+    }
+  ],
+  "diagrams": [
+    {
+      "id": "card-path",
+      "label": "Where the Agent Card is consumed",
+      "href": "/#/diagram"
+    }
+  ],
+  "stories": [
+    {
+      "id": "S21",
+      "title": "The card told my agent to include my token",
+      "say": "The card told my agent to include my token. A defence has to sit where the card is read.",
+      "file": "web/src/data/stories/S21-card-told-agent-to-include-token.json"
+    },
+    {
+      "id": "S22",
+      "title": "The agent I trusted changed overnight",
+      "say": "Nothing in A2A checks the card twice. A defence has to sit where the card is read.",
+      "file": "web/src/data/stories/S22-agent-i-trusted-changed-overnight.json"
+    }
+  ]
+}

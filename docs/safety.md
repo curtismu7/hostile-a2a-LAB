@@ -2,7 +2,7 @@
 
 This repo holds hostile content on purpose, so it is built to be inert. Each rule names the test that enforces it.
 
-| Rule | Enforced by (`server/test/`) |
+| Rule | Enforced by (`server/test/` unless a path is given) |
 | --- | --- |
 | Binds `127.0.0.1` only; refuses another address unless `HOSTILE_BIND` is set. | `safety.test.js`: "binds loopback by default...", "a started server is actually listening on loopback only". |
 | Makes no outbound request of any kind (server, victim, API). | `safety.test.js`: "the server and the victim make no outbound request" (the guard in `netguard.js` blocks every non-loopback socket, DNS lookup and fetch and records attempts; zero recorded), "the guard itself works" (it trips on all three), "server source has no outbound code path". `api.test.js` runs under the same guard. |
@@ -11,10 +11,17 @@ This repo holds hostile content on purpose, so it is built to be inert. Each rul
 | The victim never sends or executes anything; it returns the message it would send, as data. | `victim.test.js`: "executed and sent are false, always", "deterministic and side-effect free". |
 | No real tokens: where a poison asks for a token the victim shows `FAKE-TOKEN-NOT-REAL`. | `victim.test.js`: "no real token ever appears". |
 | Hostile input (huge, deeply nested, prototype-pollution keys, unicode tricks) is handled, not executed. | `scanner.test.js`, `pinning.test.js`, `victim.test.js`, `api.test.js` (413 on a huge body). |
+| The container publishes its port on loopback only, runs non-root with a read-only filesystem, all capabilities dropped and `no-new-privileges`. | `scripts/compose.test.mjs`: parses `docker-compose.yml` and fails if any published port does not start with `127.0.0.1:`, and checks the hardening settings and the Node 22 / `USER node` Dockerfile. The live container was also checked by content (see the README). |
 
 Deviations from the source server, all for safety: the card `url` uses the `Host` header only when it is loopback or a
 reserved name; the `message/send` reply echoes at most 200 characters and withholds text that names a non-reserved host;
 JSON bodies are capped. The golden-wire test proves the card and a normal reply are otherwise byte-identical to the source.
+
+## The one opt-in
+
+Inside the container the server must listen on all interfaces, so the image sets `HOSTILE_BIND=0.0.0.0`. That is the explicit opt-in, and it is safe only because compose publishes the port on `127.0.0.1`. If you run the image some other way, publish the port the same way. Never put this server on a network you do not control: it serves hostile payloads to anything that connects.
+
+Other repos are only read: `scripts/mcp-tools.integration.test.mjs` runs the mcp-tools scanner CLI from its checkout against this server over loopback, and nothing in either repo is modified.
 
 ## Not covered
 
