@@ -118,13 +118,17 @@ try {
 
   // Diagram: drag a box, Simulate with the speed control, Reset puts the box back.
   await go('diagram');
+  await page.evaluate(() => window.scrollTo(0, 0));
   await sleep(800); // let fitView settle before measuring
   const node = page.locator('.react-flow__node').filter({ hasText: 'Offline generalist' });
-  const before = await node.boundingBox();
-  await page.mouse.move(before.x + before.width / 2, before.y + 10);
+  let before = await node.boundingBox();
+  for (let i = 0; i < 20; i++) { await sleep(150); const now = await node.boundingBox(); const same = Math.abs(now.y - before.y) < 0.5 && Math.abs(now.x - before.x) < 0.5; before = now; if (same) break; }
+  await page.mouse.move(before.x + before.width / 2, before.y + before.height / 2);
+  await sleep(150);
   await page.mouse.down();
-  await page.mouse.move(before.x + before.width / 2 + 40, before.y + 90, { steps: 6 });
+  await page.mouse.move(before.x + before.width / 2 + 40, before.y + before.height / 2 + 90, { steps: 15 });
   await page.mouse.up();
+  await sleep(300);
   const after = await node.boundingBox();
   check(Math.abs(after.y - before.y) > 40, 'a diagram box can be dragged');
   await page.getByLabel('Speed').selectOption('4');
