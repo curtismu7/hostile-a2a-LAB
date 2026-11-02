@@ -10,8 +10,8 @@
 ## Scan this server's card with the mcp-tools scanner
 
 ```bash
-npm start                                   # in this repo: http://127.0.0.1:4901/
-cd ../mcp-tools && npm run scan -- --card http://127.0.0.1:4901/.well-known/agent-card.json
+npm start                                   # in this repo: http://127.0.0.1:4750/
+cd ../mcp-tools && npm run scan -- --card http://127.0.0.1:4750/.well-known/agent-card.json
 ```
 
 Expected (verified, scanner reports and never blocks): `MT-HI-001` and `MT-HI-002` on the card description (instruction tag; keep it from the user) and `MT-EX-002` on the `process_refund` skill (asks for the full conversation and tokens). The scanner does not read where the card's `url` points, so it cannot see the off-origin variant; that is pinning's job.
