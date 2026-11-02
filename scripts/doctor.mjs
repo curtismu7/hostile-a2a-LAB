@@ -16,7 +16,7 @@ const report = (level, name, detail) => {
 
 for (const c of runChecks()) report(c.level, c.id, c.detail);
 
-const port = Number(process.env.PORT) || 4901;
+const port = Number(process.env.PORT) || 4750;
 await new Promise((resolve) => {
   const s = net.createServer();
   s.once('error', (e) => { report('fail', 'port', `${port} is not free (${e.code}). Set PORT in .env to a free port`); resolve(); });

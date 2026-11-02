@@ -6,11 +6,11 @@
       "catalogId": "D7",
       "kind": "Demo",
       "description": "A deliberately hostile A2A agent, an offline delegating generalist, and a pinned-card client shown side by side with an ungoverned one: the card told my agent to include my token.",
-      "url": "http://localhost:4901",
+      "url": "http://localhost:4750",
       "healthPath": "/api/health",
       "composeFile": "/Users/cmuir/Development/hostile-a2a/docker-compose.yml",
       "composeOverlays": [],
-      "notes": "Host-run: npm start (port 4901). Or: docker compose up --build -d (publishes 127.0.0.1:4901 only). Edit composeFile to this checkout's absolute path."
+      "notes": "Host-run: npm start (port 4750). Or: docker compose up --build -d (publishes 127.0.0.1:4750 only). Edit composeFile to this checkout's absolute path."
     }
   ]
 }

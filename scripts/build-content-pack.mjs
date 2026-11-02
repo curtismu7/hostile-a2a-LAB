@@ -39,7 +39,7 @@ export function buildPack({ commit } = {}) {
     title: 'Hostile A2A agent / poisoned Agent Card',
     version: pkg.version,
     ...(commit ? { source: { repo: 'hostile-a2a', commit } } : {}),
-    demo: { id: 'hostile-a2a', name: 'Hostile A2A', catalog: 'D7', baseUrl: 'http://localhost:4901', doctor: '/api/health', tags: ['a2a', 'agent-card', 'delegation', 'card-pinning'] },
+    demo: { id: 'hostile-a2a', name: 'Hostile A2A', catalog: 'D7', baseUrl: 'http://localhost:4750', doctor: '/api/health', tags: ['a2a', 'agent-card', 'delegation', 'card-pinning'] },
     glossary: readJson('content/terms.json').sort(byId),
     sources: [],
     cards: CARDS.map(({ href, ...c }) => ({ ...c, action: { type: 'route', href } })).sort(byId),
