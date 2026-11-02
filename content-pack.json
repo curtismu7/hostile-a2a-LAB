@@ -7,7 +7,7 @@
     "id": "hostile-a2a",
     "name": "Hostile A2A",
     "catalog": "D7",
-    "baseUrl": "http://localhost:4901",
+    "baseUrl": "http://localhost:4750",
     "doctor": "/api/health",
     "tags": [
       "a2a",

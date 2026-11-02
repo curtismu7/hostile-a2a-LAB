@@ -37,31 +37,31 @@ Not verified:
 npm install
 npm run doctor     # preflight, no network
 npm run build      # the server serves web/dist
-npm start          # http://127.0.0.1:4901/  (PORT in .env to change)
+npm start          # http://127.0.0.1:4750/  (PORT in .env to change)
 npm test           # server (node:test), web (vitest), content pack, docs, compose, mcp-tools integration
 npm run e2e        # real-browser run on a temporary server (port 4943); screenshots in .data/e2e-screenshots (git-ignored)
 ```
 
-`npm run e2e -- http://127.0.0.1:4901` drives a server that is already running instead.
+`npm run e2e -- http://127.0.0.1:4750` drives a server that is already running instead.
 
 ### Docker (OrbStack)
 
 ```bash
-HOST_PORT=4901 docker compose up --build -d     # http://127.0.0.1:4901  (HOST_PORT defaults to 4901)
+HOST_PORT=4750 docker compose up --build -d     # http://127.0.0.1:4750  (HOST_PORT defaults to 4750)
 docker compose down
 ```
 
 The image is Node 22 and runs as the non-root `node` user, read-only, all capabilities dropped. Inside the container the
 server listens on all interfaces (`HOSTILE_BIND`, the explicit opt-in); `docker-compose.yml` publishes
-`127.0.0.1:HOST_PORT:4901` only, and `scripts/compose.test.mjs` fails if that changes.
+`127.0.0.1:HOST_PORT:4750` only, and `scripts/compose.test.mjs` fails if that changes.
 
 ### SE shelf, Learning Hub, scanner
 
 - Shelf: merge `docs/shelf-entry.json` into the shelf's `.data/demos.local.json` (edit `composeFile` to your checkout path).
-  With the app running on 4901 the shelf shows it as `ready` from `/api/health`.
+  With the app running on 4750 the shelf shows it as `ready` from `/api/health`.
 - Learning Hub: `content-pack.json`; regenerate and validate with `npm run content-pack` (ajv against
   `docs/content-pack.schema.json`). The pack lists no sources: this repo has no public documentation URL it can verify.
-- Scanner: `cd ../mcp-tools && npm run scan -- --card http://127.0.0.1:4901/.well-known/agent-card.json` flags the hidden
+- Scanner: `cd ../mcp-tools && npm run scan -- --card http://127.0.0.1:4750/.well-known/agent-card.json` flags the hidden
   instruction and the exfil skill. See [docs/pairing.md](docs/pairing.md).
 
 Hostile endpoints at the root: `GET /.well-known/agent-card.json` (the poisoned card), `POST /a2a/jsonrpc`

@@ -27,7 +27,7 @@ test('docker-compose.yml publishes only on 127.0.0.1', () => {
 });
 
 test('the parser flags an unbound or wildcard publish', () => {
-  for (const bad of ['- "4901:4901"', '- "0.0.0.0:4901:4901"', '- 4901']) {
+  for (const bad of ['- "4750:4750"', '- "0.0.0.0:4750:4750"', '- 4750']) {
     const ports = publishedPorts(`services:\n  a:\n    ports:\n      ${bad}\n`);
     assert.equal(ports.length, 1);
     assert.doesNotMatch(ports[0], /^127\.0\.0\.1:/);
