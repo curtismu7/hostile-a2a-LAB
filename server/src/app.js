@@ -108,7 +108,7 @@ export function createApp({ health = createHealth(), sessions = createSessions()
 }
 
 // Boot on `port` (0 = ephemeral). Refuses a non-loopback host unless HOSTILE_BIND is set.
-export function startHttpServer(port = Number(process.env.PORT) || 4901, host = bindHost(process.env), opts = {}) {
+export function startHttpServer(port = Number(process.env.PORT) || 4750, host = bindHost(process.env), opts = {}) {
   assertBindAllowed(host);
   return new Promise((resolve, reject) => {
     const httpServer = createApp(opts).listen(port, host);
