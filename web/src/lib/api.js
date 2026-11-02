@@ -11,6 +11,8 @@ async function request(path, init) {
 const post = (path, body = {}) => request(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
 
 export const getCatalog = () => request("/api/catalog");
+export const getInfo = () => request("/api/info");
+export const setMode = (source) => post("/api/mode", { source });
 export const runVictim = ({ task, mode, stage, variant, requireSignatures }) => post("/api/run-victim", { task, mode, stage, variant, ...(requireSignatures ? { requireSignatures: true } : {}) });
 export const newSession = (variant, requireSignatures) => post("/api/card-session/new", { variant, ...(requireSignatures ? { requireSignatures: true } : {}) });
 export const approve = (id) => post(`/api/card-session/${id}/approve`);

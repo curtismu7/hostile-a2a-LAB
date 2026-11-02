@@ -5,6 +5,8 @@ import Run from "./pages/Run.jsx";
 import RoundTrip from "./pages/RoundTrip.jsx";
 import Limits from "./pages/Limits.jsx";
 import Diagram from "./pages/Diagram.jsx";
+import ModeToggle from "./components/ModeToggle.jsx";
+import { getInfo, setMode } from "./lib/api.js";
 
 // Hash-routed pages (no router dependency). The banner is always on screen: this server is hostile on purpose.
 export const PAGES = [
@@ -25,12 +27,14 @@ export default function App() {
   const [page, setPage] = useState(pageFromHash);
   const [theme, setTheme] = useState(() => (["light", "dark"].includes(read("hostile-a2a.theme", "")) ? read("hostile-a2a.theme", "") : "system"));
   const [present, setPresent] = useState(() => read("hostile-a2a.present", "0") === "1");
+  const [info, setInfo] = useState(null);
 
   useEffect(() => {
     const on = () => setPage(pageFromHash());
     window.addEventListener("hashchange", on);
     return () => window.removeEventListener("hashchange", on);
   }, []);
+  useEffect(() => { getInfo().then(setInfo, () => {}); }, []);
   useEffect(() => {
     if (theme === "system") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = theme;
   }, [theme]);
@@ -40,6 +44,8 @@ export default function App() {
 
   const cycle = () => { const next = { system: "light", light: "dark", dark: "system" }[theme]; setTheme(next); write("hostile-a2a.theme", next); };
   const togglePresent = () => { write("hostile-a2a.present", present ? "0" : "1"); setPresent(!present); };
+  // Rule 19: the Mock/Real toggle. The server's answer is what the toggle shows (a refusal leaves it unchanged).
+  const selectMode = async (source) => { try { setInfo(await setMode(source)); } catch { /* refused: the toggle keeps the server's last answer */ } };
   const Page = PAGES.find(([id]) => id === page)[2];
 
   return (
@@ -54,6 +60,7 @@ export default function App() {
           {PAGES.map(([id, label]) => <a key={id} href={`#/${id}`} aria-current={id === page ? "page" : undefined}>{label}</a>)}
         </nav>
         <div className="tools-right">
+          <ModeToggle info={info} onSelect={selectMode} />
           <button type="button" className="btn" aria-pressed={present} onClick={togglePresent}>Present</button>
           <button type="button" className="btn" onClick={cycle} title="Theme: system, light, dark">Theme: {theme}</button>
         </div>
