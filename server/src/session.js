@@ -37,6 +37,8 @@ export function createSessions({ max = 50, ttlMs = 15 * 60_000, now = Date.now }
       return e.session;
     },
     delete: (id) => live.delete(id),
+    /** Drop every session (rule 3 reset): the fixtures are static, so nothing else carries state. */
+    deleteAll: () => { const n = live.size; live.clear(); return n; },
     size: () => live.size,
   };
 }

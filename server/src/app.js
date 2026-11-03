@@ -15,6 +15,8 @@ import { runScenario, seen } from './scenario.js';
 import { assertBindAllowed, bindHost } from './safety.js';
 import { createSessions } from './session.js';
 import { VICTIM_RULES } from './victim.js';
+import { loadCustomer, DEFAULT_CUSTOMER } from './customer.js';
+import { workspaceMiddleware } from './workspace.js';
 
 const WEB_DIST = process.env.WEB_DIST || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../web/dist');
 const bad = (res, message, status = 400) => res.status(status).json({ error: status === 404 ? 'not_found' : status === 409 ? 'conflict' : 'bad_request', message });
@@ -31,25 +33,26 @@ function checkVariant(body) {
   return null;
 }
 
-export function createApp({ health = createHealth(), sessions = createSessions(), publicBaseUrl, port } = {}) {
+export function createApp({ health = createHealth(), sessions = createSessions(), publicBaseUrl, port, customer = loadCustomer() } = {}) {
   const app = express();
   app.disable('x-powered-by');
 
   const api = express.Router();
   api.use(express.json({ limit: '8kb' }));
+  api.use(workspaceMiddleware());
   api.use('/health', health.router);
   // Rule 19: the Mock/Real toggle's API. This app is mock only (an offline hostile server and an offline victim, no model, no network),
   // so Real is never available. There is no hosted build, so there is no 403 path.
   const NO_REAL = 'Real is not available: this app has no live version (an offline hostile server and an offline victim, no model, no network). Mock is the whole demo.';
-  const infoBody = () => ({ mode: 'local', hosted: false, source: 'mock', realAvailable: false });
-  api.get('/info', (_req, res) => res.json(infoBody()));
+  const infoBody = (req) => ({ mode: 'local', hosted: false, source: 'mock', realAvailable: false, workspaceId: req?.workspaceId ?? 'default' });
+  api.get('/info', (req, res) => res.json(infoBody(req)));
   api.post('/mode', (req, res) => {
     const b = req.body;
     if (b === null || typeof b !== 'object' || Array.isArray(b) || Object.keys(b).length !== 1 || !['mock', 'real'].includes(b.source)) return bad(res, 'body must be exactly {source: "mock" or "real"}');
     if (b.source === 'real') return bad(res, NO_REAL, 409);
-    return res.json(infoBody());
+    return res.json(infoBody(req));
   });
-  api.get('/catalog', (_req, res) => res.json(catalog()));
+  api.get('/catalog', (_req, res) => res.json({ ...catalog(), customer: { ...DEFAULT_CUSTOMER, ...customer } }));
   // The payload host scan, run on demand: every payload the server can put on the wire, checked for any non-reserved host.
   api.get('/safety-scan', (_req, res) => {
     const offenders = scanPayloads();
@@ -93,6 +96,13 @@ export function createApp({ health = createHealth(), sessions = createSessions()
     return res.json({ fetchNumber: next.fetchNumber, card: seen(next.card), check: session.check(next.card) });
   }));
   api.delete('/card-session/:id', (req, res) => (sessions.delete(req.params.id) ? res.status(204).end() : bad(res, 'no such session', 404)));
+
+  // Reset (rule 3): POST /api/reset drops every card session. The Agent Card fixtures are
+  // static data and scenario runs are stateless; nothing else carries state.
+  api.post('/reset', (req, res) => {
+    const cleared = sessions.deleteAll();
+    res.json({ ok: true, cleared, note: 'card sessions are gone; the fixtures never change' });
+  });
 
   api.use((_req, res) => bad(res, 'no such endpoint', 404));
   api.use((err, _req, res, _next) => { // eslint-disable-line no-unused-vars
