@@ -1,6 +1,6 @@
 # hostile-a2a
 
-Hostile A2A agent demo (catalog item D7). A deliberately hostile A2A specialist serves a **poisoned Agent Card**; an
+Tier: Demo. Hostile A2A agent demo (catalog item D7). A deliberately hostile A2A specialist serves a **poisoned Agent Card**; an
 offline delegating "generalist" shows what the card makes it do; a **pinned-card client** is shown side by side with an
 ungoverned one, telling the story "the card told my agent to include my token".
 
