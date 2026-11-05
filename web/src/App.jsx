@@ -1,5 +1,6 @@
 // Copied from hostile-mcp (web/src/App.jsx) and adapted. Not imported across repos.
 import React, { useEffect, useState } from "react";
+import ShelfLink from "./components/ShelfLink.jsx";
 import Gallery from "./pages/Gallery.jsx";
 import Run from "./pages/Run.jsx";
 import RoundTrip from "./pages/RoundTrip.jsx";
@@ -60,6 +61,7 @@ export default function App() {
           {PAGES.map(([id, label]) => <a key={id} href={`#/${id}`} aria-current={id === page ? "page" : undefined}>{label}</a>)}
         </nav>
         <div className="tools-right">
+            <ShelfLink />
           <ModeToggle info={info} onSelect={selectMode} />
           <button type="button" className="btn" aria-pressed={present} onClick={togglePresent}>Present</button>
           <button type="button" className="btn" onClick={cycle} title="Theme: system, light, dark">Theme: {theme}</button>

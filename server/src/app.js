@@ -17,6 +17,7 @@ import { createSessions } from './session.js';
 import { VICTIM_RULES } from './victim.js';
 import { loadCustomer, DEFAULT_CUSTOMER } from './customer.js';
 import { workspaceMiddleware } from './workspace.js';
+import { shelfInfo } from './shelfLink.js';
 
 const WEB_DIST = process.env.WEB_DIST || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../web/dist');
 const bad = (res, message, status = 400) => res.status(status).json({ error: status === 404 ? 'not_found' : status === 409 ? 'conflict' : 'bad_request', message });
@@ -122,6 +123,7 @@ export function createApp({ health = createHealth(), sessions = createSessions()
   });
 
   if (fs.existsSync(path.join(WEB_DIST, 'index.html'))) {
+app.get('/api/shelf', (_req, res) => { res.set('Cache-Control', 'no-store'); res.json(shelfInfo()); }); // the header "Shelf" button
     app.use(express.static(WEB_DIST));
     app.get(/^\/(?!api\/|a2a\/|variants\/|rugpull\/|health$|\.well-known\/).*/, (_req, res) => res.sendFile(path.join(WEB_DIST, 'index.html')));
   }
