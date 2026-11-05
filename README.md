@@ -1,11 +1,42 @@
-# hostile-a2a
+# Hostile A2A LAB
 
 Tier: Demo. Hostile A2A agent demo (catalog item D7). A deliberately hostile A2A specialist serves a **poisoned Agent Card**; an
+
+Repo: https://github.com/curtismu7/hostile-a2a-LAB
 offline delegating "generalist" shows what the card makes it do; a **pinned-card client** is shown side by side with an
 ungoverned one, telling the story "the card told my agent to include my token".
 
 The point: nothing in A2A discovery inspects card text. It arrives byte for byte. A defense sits where the card is
 **consumed**. The server serves payloads and never blocks.
+
+## Run from a clone
+
+Prerequisites: Node 26. Docker (OrbStack) only for the Docker form.
+
+```
+git clone https://github.com/curtismu7/hostile-a2a-LAB.git
+cd hostile-a2a-LAB
+npm ci
+npm run build
+npm run doctor
+npm start
+```
+
+## Ports, and what to do if the port is taken
+
+```
+Ports: hostile-a2a-LAB listens on 4750 (set with PORT, default 4750).
+Port range for this app: 4700-4799.
+
+If the port is taken:
+1. Find what is using it:
+   lsof -iTCP:4750 -sTCP:LISTEN -n -P
+2. If it is an old copy of this app, stop that process: kill <PID>.
+3. If it is something else, stop it, or start this app on another port:
+   PORT=<other port> npm start
+```
+
+Other variable: `HOST_PORT=4750` (Docker host port). Keep both inside 4700-4799.
 
 ## Status
 
@@ -24,7 +55,7 @@ Not verified:
 - The Docker image and compose file were built and run on OrbStack and checked by content (health, the page, a card
   round trip through the API, the payload safety scan, non-root, read-only, loopback-only publish, and the e2e script
   against the container). That is a manual check, not CI. CI only parses the compose file for the loopback-only port.
-- The shelf check (the entry shows `ready` on a running shelf) was a manual run against `/Users/cmuir/Development/demo-shelf`
+- The shelf check (the entry shows `ready` on a running shelf) was a manual run against the local demo-shelf clone
   with a temporary data directory, not a test in this repo.
 - The mcp-tools integration test is skipped when that checkout (or its `node_modules`) is absent.
 - The generalist is a deterministic stand-in, not a model: it shows what a client that obeys card text would do, not how
