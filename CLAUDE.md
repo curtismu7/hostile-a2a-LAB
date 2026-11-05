@@ -1,6 +1,6 @@
 # CLAUDE.md: hostile-a2a LAB
 
-Tier: Demo. A deliberately hostile A2A specialist serves a poisoned Agent Card; an offline delegating "generalist" shows what the card makes it do; a pinned-card client is shown beside an ungoverned one (story: "the card told my agent to include my token"). Catalog item D7. Node 26, Express server (`server/`), React + Vite page (`web/`), loopback only, in-memory sessions. Repo: https://github.com/ping-sandbox/hostile-a2a-LAB. Read `README.md` first; the rulebook is `~/Development/STANDALONE-RULES.md` (skill `standalone-demo`).
+Tier: Demo. A deliberately hostile A2A specialist serves a poisoned Agent Card; an offline delegating "generalist" shows what the card makes it do; a pinned-card client is shown beside an ungoverned one (story: "the card told my agent to include my token"). Catalog item D7. Node 26, Express server (`server/`), React + Vite page (`web/`), loopback only, in-memory sessions. Repo: https://github.com/curtismu7/hostile-a2a-LAB. Read `README.md` first; the rulebook is `~/Development/STANDALONE-RULES.md` (skill `standalone-demo`).
 
 ## Run and test
 - `npm ci`, `npm test` (server + web + script tests), `npm run doctor`, `npm start`. Docker: `docker compose up --build -d`, publishes `127.0.0.1` only.
