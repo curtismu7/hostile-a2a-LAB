@@ -112,6 +112,7 @@ export function createApp({ health = createHealth(), sessions = createSessions()
     console.error('[hostile-a2a] api error:', err.message);
     return res.status(500).json({ error: 'server_error' });
   });
+  app.get('/api/shelf', (_req, res) => { res.set('Cache-Control', 'no-store'); res.json(shelfInfo()); }); // the header "Shelf" button
   app.use('/api', api);
 
   app.use(createHostileRouter({ publicBaseUrl, port }));
@@ -123,7 +124,6 @@ export function createApp({ health = createHealth(), sessions = createSessions()
   });
 
   if (fs.existsSync(path.join(WEB_DIST, 'index.html'))) {
-app.get('/api/shelf', (_req, res) => { res.set('Cache-Control', 'no-store'); res.json(shelfInfo()); }); // the header "Shelf" button
     app.use(express.static(WEB_DIST));
     app.get(/^\/(?!api\/|a2a\/|variants\/|rugpull\/|health$|\.well-known\/).*/, (_req, res) => res.sendFile(path.join(WEB_DIST, 'index.html')));
   }
