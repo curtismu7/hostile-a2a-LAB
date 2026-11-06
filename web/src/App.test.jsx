@@ -25,11 +25,11 @@ test("the five pages are gallery, run, round trip, limits and diagram", () => {
   expect(PAGES.map(([id]) => id)).toEqual(["gallery", "run", "roundtrip", "limits", "diagram"]);
 });
 
-test("the theme button cycles and the presenter toggle sets the presenter flag", async () => {
+test("the theme picker and the presenter toggle set the presenter flag", async () => {
   render(<App />);
-  await userEvent.click(screen.getByRole("button", { name: /Theme: system/ }));
+  await userEvent.selectOptions(screen.getByTestId("theme"), "light");
   expect(document.documentElement.dataset.theme).toBe("light");
-  await userEvent.click(screen.getByRole("button", { name: /Theme: light/ }));
+  await userEvent.selectOptions(screen.getByTestId("theme"), "dark");
   expect(document.documentElement.dataset.theme).toBe("dark");
   const present = screen.getByRole("button", { name: "Present" });
   await userEvent.click(present);

@@ -43,7 +43,7 @@ export default function App() {
     if (present) document.documentElement.dataset.present = "1"; else delete document.documentElement.dataset.present;
   }, [present]);
 
-  const cycle = () => { const next = { system: "light", light: "dark", dark: "system" }[theme]; setTheme(next); write("hostile-a2a.theme", next); };
+  const setThemeValue = (t) => { setTheme(t); write("hostile-a2a.theme", t); };
   const togglePresent = () => { write("hostile-a2a.present", present ? "0" : "1"); setPresent(!present); };
   // Rule 19: the Mock/Real toggle. The server's answer is what the toggle shows (a refusal leaves it unchanged).
   const selectMode = async (source) => { try { setInfo(await setMode(source)); } catch { /* refused: the toggle keeps the server's last answer */ } };
@@ -64,7 +64,13 @@ export default function App() {
             <ShelfLink />
           <ModeToggle info={info} onSelect={selectMode} />
           <button type="button" className="btn" aria-pressed={present} onClick={togglePresent}>Present</button>
-          <button type="button" className="btn" onClick={cycle} title="Theme: system, light, dark">Theme: {theme}</button>
+          <label className="inline">Theme
+            <select value={theme} onChange={(e) => setThemeValue(e.target.value)} data-testid="theme">
+              <option value="system">Auto</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </label>
         </div>
       </header>
       <main className="page" id="main" tabIndex={-1}>
