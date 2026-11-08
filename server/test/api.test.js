@@ -168,3 +168,18 @@ test('unknown API paths are 404 JSON; other methods on known paths do not crash'
   assert.equal((await fetch(`${(await get('/api/health')).url}`, { method: 'POST' })).status, 405);
   assert.equal((await post('/api/catalog', {})).status, 404);
 }));
+
+test('GET /api/shelf is reachable with no web build: returns the SHELF_URL (trailing slash trimmed); POST is not 200', async () => {
+  const before = process.env.SHELF_URL;
+  process.env.SHELF_URL = 'https://shelf.example:8443/';
+  try {
+    await withServer(async ({ base, get, post }) => {
+      const r = await get('/api/shelf');
+      assert.equal(r.status, 200);
+      assert.deepEqual(await r.json(), { shelfUrl: 'https://shelf.example:8443' });
+      assert.notEqual((await post('/api/shelf', {})).status, 200);
+    });
+  } finally {
+    if (before === undefined) delete process.env.SHELF_URL; else process.env.SHELF_URL = before;
+  }
+});
