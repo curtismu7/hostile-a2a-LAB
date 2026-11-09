@@ -1,5 +1,14 @@
 {
   "_comment": "Hosts and ids the forbidden-string gate lets through, each with the reason. Add nothing here without a reason.",
-  "hosts": [],
+  "hosts": [
+    {
+      "host": "local.ping-devops.com",
+      "reason": "The public name of the family lab-proxy (https://local.ping-devops.com:8443/hostile-a2a/). The Origin check compares the browser's Origin with it, so the code and its tests must name it."
+    },
+    {
+      "host": "hostile-a2a.local.ping-devops.com",
+      "reason": "The Host the family lab-proxy sends for this app: the docker-compose LAB_ALLOWED_HOSTS default, the README and the same-origin tests name it."
+    }
+  ],
   "uuids": []
 }

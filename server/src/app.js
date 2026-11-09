@@ -18,6 +18,7 @@ import { VICTIM_RULES } from './victim.js';
 import { loadCustomer, DEFAULT_CUSTOMER } from './customer.js';
 import { workspaceMiddleware } from './workspace.js';
 import { shelfInfo } from './shelfLink.js';
+import { makeHostGuard, makeOriginGuard, parseLabHosts, proxyHostSet } from './sameorigin.js';
 
 const WEB_DIST = process.env.WEB_DIST || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../web/dist');
 const bad = (res, message, status = 400) => res.status(status).json({ error: status === 404 ? 'not_found' : status === 409 ? 'conflict' : 'bad_request', message });
@@ -34,9 +35,17 @@ function checkVariant(body) {
   return null;
 }
 
-export function createApp({ health = createHealth(), sessions = createSessions(), publicBaseUrl, port, customer = loadCustomer() } = {}) {
+export function createApp({ health = createHealth(), sessions = createSessions(), publicBaseUrl, port, customer = loadCustomer(),
+  labHosts = parseLabHosts(process.env.LAB_ALLOWED_HOSTS), labPort = Number(process.env.PORT) || 4750 } = {}) {
   const app = express();
   app.disable('x-powered-by');
+  // The demo API (/api/*) answers loopback Hosts plus the LAB_ALLOWED_HOSTS names on this app's port, and refuses a write
+  // from a foreign Origin (the family rule; see sameorigin.js). The hostile A2A surface at the root (agent cards, JSON-RPC,
+  // /health) is deliberately NOT guarded: it is the attacker's own server, meant to be fetched by other A2A clients and
+  // processes under any Host (the card names only loopback or reserved hosts whatever Host says), and it holds no state
+  // a cross-site page could change beyond the per-sid rug-pull counter.
+  const proxyHosts = proxyHostSet(labHosts, labPort);
+  app.use('/api', makeHostGuard(proxyHosts), makeOriginGuard(proxyHosts));
 
   const api = express.Router();
   api.use(express.json({ limit: '8kb' }));
