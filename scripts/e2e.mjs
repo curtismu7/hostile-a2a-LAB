@@ -148,9 +148,10 @@ try {
   await page.emulateMedia({ colorScheme: 'dark' });
   await shot('6a-run-dark');
   await page.emulateMedia({ colorScheme: 'light' });
-  await page.getByRole('button', { name: /^Theme:/ }).click();
-  check((await page.evaluate(() => document.documentElement.dataset.theme)) === 'light', 'the theme button forces light');
-  await page.getByRole('button', { name: /^Theme:/ }).click();
+  await page.getByTestId('theme').selectOption('light');
+  check((await page.evaluate(() => document.documentElement.dataset.theme)) === 'light', 'the theme picker forces light');
+  await page.getByTestId('theme').selectOption('dark');
+  check((await page.evaluate(() => document.documentElement.dataset.theme)) === 'dark', 'the theme picker forces dark');
   await shot('6b-run-forced-dark');
   await page.setViewportSize({ width: 375, height: 800 });
   for (const hash of ['gallery', 'run?poison=rug-pull', 'roundtrip', 'limits', 'diagram']) {
