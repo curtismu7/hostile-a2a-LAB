@@ -95,6 +95,14 @@ server listens on all interfaces (`HOSTILE_BIND`, the explicit opt-in); `docker-
 - Scanner: `cd ../mcp-tools && npm run scan -- --card http://127.0.0.1:4750/.well-known/agent-card.json` flags the hidden
   instruction and the exfil skill. See [docs/pairing.md](docs/pairing.md).
 
+Host check and same-origin writes: the demo API (`/api/*`) answers loopback Host headers plus each `LAB_ALLOWED_HOSTS` name
+(comma-separated, no port) on `PORT`; every other Host gets 403. Docker defaults `LAB_ALLOWED_HOSTS` to
+`hostile-a2a.local.ping-devops.com`, the Host the family lab-proxy (`https://local.ping-devops.com:8443/hostile-a2a/`) sends. A
+write with an Origin header is accepted only from the loopback origin matching Host, or, on a `LAB_ALLOWED_HOSTS` Host only, when
+Origin equals `X-Forwarded-Proto://X-Forwarded-Host` (the proxy's origin); every other Origin gets 403. The hostile endpoints
+below are deliberately left open: they are the attacker's server, fetched by other A2A clients (the scanner, a victim agent) under
+any Host, they name only loopback or reserved hosts whatever Host says, and they hold no state worth forging.
+
 Hostile endpoints at the root: `GET /.well-known/agent-card.json` (the poisoned card), `POST /a2a/jsonrpc`
 (`message/send`, a fixed fake reply), `GET /variants/:variant/.well-known/agent-card.json`,
 `GET /rugpull/:sid/.well-known/agent-card.json` (clean on the first GET per `sid`, poisoned after).

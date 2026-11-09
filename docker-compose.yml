@@ -12,6 +12,9 @@ services:
       SHELF_URL: ${SHELF_URL:-http://127.0.0.1:4400}
       PORT: "4750"
       HOSTILE_BIND: 0.0.0.0
+      # Extra Host names the demo API answers besides loopback; every other Host is refused. The default is the name the
+      # family lab-proxy (https://local.ping-devops.com:8443/hostile-a2a/) sends in Host.
+      LAB_ALLOWED_HOSTS: ${LAB_ALLOWED_HOSTS:-hostile-a2a.local.ping-devops.com}
     read_only: true
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
