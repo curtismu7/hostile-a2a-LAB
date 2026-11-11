@@ -63,6 +63,12 @@ export default function RoundTrip({ present }) {
     sessionId.current = null; setState({}); setStep(0); setError("");
   };
 
+  // One primary per view state: the button for the step you are on (the last state, flow finished, offers Reset).
+  // The others stay secondary. Written once so the class is decided in one place.
+  const flowButton = (primaryAt, label, onClick, disabled) => (
+    <button type="button" className={step === primaryAt ? "btn primary" : "btn"} onClick={onClick} disabled={disabled}>{label}</button>
+  );
+
   const { first, approval, second, ungoverned, pinned } = state;
   const check = second?.check;
   const diffRow = (d) => (
@@ -72,9 +78,9 @@ export default function RoundTrip({ present }) {
 
   return (
     <>
-      <StoryPanel mode="roundtrip" present={present} />
-      <h2>Card round trip: the agent changed overnight</h2>
+      <h1>Card round trip: the agent changed overnight</h1>
       <p className="lede">Three steps against the real hostile server. It answers fetch #1 with a clean card and every later fetch with a changed one. Choose how it changes before you start.</p>
+      <StoryPanel mode="roundtrip" present={present} />
       <div className="card controls">
         <label>What changes
           <select value={variant} onChange={(e) => setVariant(e.target.value)} disabled={step > 0}>
@@ -87,7 +93,7 @@ export default function RoundTrip({ present }) {
         <li className="card" aria-current={step === 0 ? "step" : undefined}>
           <h3><span className="story__n">1</span> Approve fetch #1</h3>
           <p>The card is clean. The pinned client hashes name, description, url, version, capabilities, skills and security schemes, and trusts them from now on.</p>
-          <button type="button" className="btn primary" onClick={approveFirst} disabled={busy || step !== 0}>Approve fetch #1 (pin it)</button>
+          {flowButton(0, "Approve fetch #1 (pin it)", approveFirst, busy || step !== 0)}
           {first && (
             <div data-testid="step1">
               <h4>Fetch #{first.fetchNumber}</h4>
@@ -99,7 +105,7 @@ export default function RoundTrip({ present }) {
         <li className="card" aria-current={step === 1 ? "step" : undefined}>
           <h3><span className="story__n">2</span> Come back later</h3>
           <p>The next morning the client fetches the same well-known path again.</p>
-          <button type="button" className="btn primary" onClick={comeBack} disabled={busy || step !== 1}>Fetch the card again (#2)</button>
+          {flowButton(1, "Fetch the card again (#2)", comeBack, busy || step !== 1)}
           {second && (
             <div data-testid="step2">
               <h4>Fetch #{second.fetchNumber}</h4>
@@ -110,7 +116,7 @@ export default function RoundTrip({ present }) {
         <li className="card" aria-current={step === 2 ? "step" : undefined}>
           <h3><span className="story__n">3</span> Compare</h3>
           <p>Run the same task through both clients with card #2 as the server now serves it.</p>
-          <button type="button" className="btn primary" onClick={doCompare} disabled={busy || step !== 2}>Compare the two clients</button>
+          {flowButton(2, "Compare the two clients", doCompare, busy || step !== 2)}
           {pinned && check && (
             <div data-testid="step3">
               <h4>What changed</h4>
@@ -144,7 +150,7 @@ export default function RoundTrip({ present }) {
           )}
         </li>
       </ol>
-      <button type="button" className="btn" onClick={reset} disabled={busy || step === 0}>Reset the flow</button>
+      {flowButton(3, "Reset the flow", reset, busy || step === 0)}
     </>
   );
 }

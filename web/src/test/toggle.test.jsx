@@ -39,6 +39,28 @@ test("before the server answers both buttons are disabled", () => {
   expect(screen.getByTestId("mode-real")).toBeDisabled();
 });
 
+const banner = () => screen.getByTestId("banner");
+
+test("the banner says MOCK before the server answers and when /api/info fails", () => {
+  vi.stubGlobal("fetch", vi.fn(mockFetch({ "GET /api/catalog": catalog })));
+  render(<App />);
+  expect(banner()).toHaveTextContent(/^MOCK mode\. This A2A agent is deliberately hostile\./);
+  expect(banner()).toHaveAttribute("data-state", "mock");
+});
+
+test("the banner follows /api/info: MOCK for mock, REAL and the live edge for real", async () => {
+  vi.stubGlobal("fetch", vi.fn(mockFetch({ "GET /api/catalog": catalog, "GET /api/info": { mode: "local", hosted: false, source: "mock", realAvailable: true } })));
+  const { unmount } = render(<App />);
+  await waitFor(() => expect(screen.getByTestId("mode-mock")).toHaveAttribute("aria-pressed", "true"));
+  expect(banner()).toHaveTextContent(/^MOCK mode\./);
+  expect(banner()).toHaveAttribute("data-state", "mock");
+  unmount();
+  vi.stubGlobal("fetch", vi.fn(mockFetch({ "GET /api/catalog": catalog, "GET /api/info": { mode: "local", hosted: false, source: "real", realAvailable: true } })));
+  render(<App />);
+  await waitFor(() => expect(banner()).toHaveTextContent(/^REAL mode\. This A2A agent is deliberately hostile\./));
+  expect(banner()).toHaveAttribute("data-state", "live");
+});
+
 test("the page loads /api/info into the header toggle and asks for the switch through /api/mode", async () => {
   const calls = [];
   const routes = {

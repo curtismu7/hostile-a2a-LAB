@@ -162,6 +162,21 @@ try {
     await shot(`7-narrow-${hash.split('?')[0]}`);
   }
 
+  // Tablet widths: the bar must not crush the nav (squeezed to a few px, the links stack two words per line).
+  for (const width of [601, 700, 800, 900, 1100]) {
+    await page.setViewportSize({ width, height: 800 });
+    await go('gallery');
+    await sleep(300);
+    const m = await page.evaluate(() => ({
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      tallestLink: Math.max(...[...document.querySelectorAll('.shell-nav a')].map((a) => a.getBoundingClientRect().height)),
+      navWidth: document.querySelector('.shell-nav').getBoundingClientRect().width,
+      bar: document.querySelector('.shell-bar').getBoundingClientRect().height,
+    }));
+    check(m.overflow <= 0 && m.tallestLink <= 40 && m.navWidth >= 300 && m.bar <= 160, `tablet (${width}px): no page scroll, one line per nav link, nav ${Math.round(m.navWidth)}px wide, bar ${Math.round(m.bar)}px high`);
+    await shot(`8-tablet-${width}`);
+  }
+
   check(external.length === 0, `no request left the app origin${external.length ? `: ${external.join(', ')}` : ''}`);
   check(errors.length === 0, `no console or page errors${errors.length ? `: ${errors.join(' | ')}` : ''}`);
 } finally {
