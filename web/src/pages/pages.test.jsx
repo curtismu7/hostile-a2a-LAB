@@ -20,6 +20,7 @@ test("gallery groups poisons by category; badges come from the catalog data; ser
   expect(within(desc).getByText("description-injection")).toBeInTheDocument();
   expect(within(desc).getByText("hidden-characters")).toBeInTheDocument();
   const rug = screen.getByTestId("poison-card-rug-pull");
+  expect(within(rug).getByRole("heading", { level: 4 })).toHaveTextContent("card-rug-pull"); // h4 under the h3 category
   expect(within(rug).getByText("Caught by pinning")).toBeInTheDocument();
   expect(within(rug).getByText("Caught by the scanner (partly)")).toBeInTheDocument();
   expect(within(rug).getByRole("link", { name: "Run it through both clients" })).toHaveAttribute("href", "#/run?poison=rug-pull");
@@ -174,6 +175,8 @@ test("limits page states plainly that signature verification is not implemented,
   render(<Limits />);
   expect(screen.getByTestId("signature-note")).toHaveTextContent(/signature verification is NOT implemented/i);
   const first = await screen.findByTestId("limit-first-use-poison");
+  expect(within(first).getByRole("heading", { level: 2 })).toBeInTheDocument(); // the section title is an h2 under the page h1 ...
+  expect(within(within(first).getByTestId("poison-description-injection")).getByRole("heading", { level: 3 })).toBeInTheDocument(); // ... and its cards are h3
   for (const id of PROOF["first-use-poison"]) expect(within(first).getByTestId(`poison-${id}`)).toBeInTheDocument();
   expect(within(screen.getByTestId("limit-signatures-not-verified")).getByTestId("poison-unsigned-card")).toBeInTheDocument();
   expect(within(screen.getByTestId("limit-semantic-manipulation")).getByTestId("poison-plain-language-steering")).toBeInTheDocument();
