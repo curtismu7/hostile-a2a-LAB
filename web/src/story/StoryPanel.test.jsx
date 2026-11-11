@@ -1,5 +1,5 @@
 import React from "react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import StoryPanel from "./StoryPanel.jsx";
@@ -14,6 +14,17 @@ test("the Allowed/Blocked switch changes the wording of a step that has a blocke
   await userEvent.click(screen.getByRole("button", { name: "Blocked" }));
   expect(screen.getByText(/refuses the changed card until/)).toBeInTheDocument();
   expect(screen.getByText(/Proof:/).parentElement).toHaveTextContent(/reported as changed with a field diff, withheld/);
+});
+
+test("the steps are one exclusive selector: a named group, aria-pressed on the selected step only, no aria-current", async () => {
+  render(<StoryPanel mode="roundtrip" />);
+  const group = screen.getByRole("group", { name: "Talk track steps" });
+  const pressed = () => within(group).getAllByRole("button").map((b) => b.getAttribute("aria-pressed"));
+  expect(pressed()).toEqual(["true", "false", "false", "false", "false"]);
+  expect(group.querySelector("[aria-current]")).toBeNull();
+  await userEvent.click(within(group).getByRole("button", { name: /3\s*Compare/ }));
+  expect(pressed()).toEqual(["false", "false", "true", "false", "false"]);
+  expect(screen.getByRole("group", { name: "Story path" })).toBeInTheDocument();
 });
 
 test("the vertical re-skins the story and is remembered", async () => {
