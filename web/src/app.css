@@ -5,21 +5,30 @@
 */
 :root[data-present="1"] body { font-size: 20px; }
 :root[data-present="1"] [data-admin-only] { display: none; }
-.page { max-width: 76rem; margin: 0 auto; padding: 1rem 0; }
-h1 { margin: 0; font-size: 1.25rem; }
-h2 { margin: 0.5rem 0 0.25rem; font-size: 1.4rem; }
-h3 { margin: 0 0 0.5rem; font-size: 1.1rem; }
+/* Page frame (standard section 3): one centred 1100px column, banner first, then the h1 title. */
+.page { max-width: 1100px; margin: 0 auto; padding: 0.5rem 0 3rem; min-width: 0; }
+h1 { margin: 0.75rem 0 0.25rem; font-size: 1.4rem; }
+h2, h3 { margin: 0 0 0.5rem; font-size: 1.1rem; }
 h4 { margin: 0.75rem 0 0.25rem; font-size: 1rem; }
 .lede, .muted { color: var(--muted); }
 .small { font-size: 0.85rem; }
 a { color: var(--status-info); }
 code { font-size: 0.85rem; overflow-wrap: anywhere; }
 
-.top { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.25rem; margin: 0 -16px; padding: 0.6rem 16px; border-bottom: 1px solid var(--border); background: var(--surface); }
-.top nav { display: flex; flex-wrap: wrap; gap: 0.25rem; flex: 1 1 20rem; min-width: 0; }
-.top nav a { padding: 0.35rem 0.7rem; border-radius: 6px; color: var(--text); text-decoration: none; border: 1px solid transparent; }
-.top nav a[aria-current="page"] { border-color: var(--accent); font-weight: 700; }
-.tools-right { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+/* App shell (standard section 1): Core Dark bar in both themes, Ping Red gradient rule, pill nav. */
+.shell-bar { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; padding: 0.6rem 1.25rem; margin: 0 -16px;
+  background: var(--box-dark); color: var(--on-box); border-bottom: 3px solid transparent; border-image: var(--accent-gradient) 1; }
+.shell-brand { display: inline-flex; align-items: center; gap: 0.6rem; font-weight: 700; letter-spacing: 0.02em; }
+.shell-logo { width: 1.9rem; height: 1.9rem; border-radius: 4px; background: var(--accent-gradient); color: var(--on-accent); display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem; }
+.shell-nav { display: flex; gap: 0.25rem; flex: 1; flex-wrap: wrap; min-width: 0; }
+.shell-nav a { padding: 0.3rem 0.75rem; border-radius: 999px; color: var(--on-box); text-decoration: none; font-size: 0.85rem; font-weight: 500; border: 1px solid transparent; }
+.shell-nav a:hover { border-color: var(--on-box); }
+.shell-nav a[aria-current="page"] { background: var(--accent-gradient); color: var(--on-accent); font-weight: 600; }
+.shell-nav a:focus-visible { outline: 3px solid var(--on-box); outline-offset: 2px; }
+.shell-right { display: inline-flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; font-size: 0.85rem; }
+.shell-right button, .shell-right .shelf-link { min-height: 32px; padding: 4px 10px; }
+.shell-right .shell-theme { color: var(--on-box); }
+.shell-right :focus-visible { outline-color: var(--on-box); } /* the shared ring is dark blue in the light theme: too faint on the dark bar */
 .seg { display: inline-flex; flex-wrap: wrap; gap: 0.25rem; }
 
 .card { padding: 1rem; margin-bottom: 1rem; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
@@ -29,7 +38,7 @@ code { font-size: 0.85rem; overflow-wrap: anywhere; }
 .controls select { max-width: 100%; text-overflow: ellipsis; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(22rem, 100%), 1fr)); gap: 0.75rem; }
 .poison { padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); min-width: 0; }
-.poison h4 { margin-top: 0; }
+.poison h3, .poison h4 { margin-top: 0; font-size: 1rem; }
 .poison dl, .hashes { display: grid; grid-template-columns: auto 1fr; gap: 0.15rem 0.75rem; margin: 0.4rem 0; font-size: 0.9rem; }
 dt { font-weight: 700; color: var(--muted); } dd { margin: 0; overflow-wrap: anywhere; }
 .badges { list-style: none; display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0.4rem 0; padding: 0; }
@@ -88,6 +97,7 @@ th, td { padding: 0.5rem; border-bottom: 1px solid var(--border); text-align: le
 .story__step { display: flex; align-items: center; gap: 0.5rem; width: 100%; text-align: left; padding: 0.4rem 0.6rem; }
 .is-current > .story__step { border-color: var(--accent); font-weight: 700; }
 .story__n { display: inline-grid; place-items: center; min-width: 1.4rem; height: 1.4rem; border-radius: 999px; background: var(--accent); color: var(--on-accent); font-size: 0.75rem; }
+.story__step[aria-pressed="true"] .story__n { background: var(--on-accent); color: var(--accent); } /* the selected step is filled accent, so its number flips */
 .story__tag { margin-left: auto; padding: 0.05rem 0.5rem; border-radius: 999px; border: 1px solid var(--status-warn); color: var(--status-warn); font-size: 0.75rem; font-weight: 700; }
 .story__body { margin: 0.4rem 0 0.4rem 2rem; font-size: 0.9rem; }
 .story__body p { margin: 0.3rem 0; }
@@ -106,6 +116,8 @@ th, td { padding: 0.5rem; border-bottom: 1px solid var(--border); text-align: le
 .callout { padding: 0.6rem 0.8rem; border-radius: 6px; background: var(--surface-2); color: var(--text); border: 1px solid var(--status-warn); margin: 0 0 1rem; }
 
 @media (max-width: 600px) {
+  .shell-bar { gap: 0.6rem; padding: 0.6rem 1rem; }
+  .shell-nav { order: 3; flex-basis: 100%; }
   .story__body { margin-left: 0.25rem; }
   .story__summary, .poison dl, .hashes, .kv { grid-template-columns: 1fr; }
 }
@@ -113,3 +125,4 @@ th, td { padding: 0.5rem; border-bottom: 1px solid var(--border); text-align: le
 .mode-toggle button { border: 0; border-radius: 0; padding: 3px 12px; background: var(--surface-2); color: var(--text); font-size: 0.85rem; cursor: default; }
 .mode-toggle button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); font-weight: 700; }
 .mode-toggle button:disabled { opacity: 0.6; }
+.mode-toggle button:focus-visible { outline-offset: -3px; } /* the pill clips (overflow hidden), so the ring is drawn inside it */

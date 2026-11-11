@@ -49,31 +49,33 @@ export default function App() {
   const selectMode = async (source) => { try { setInfo(await setMode(source)); } catch { /* refused: the toggle keeps the server's last answer */ } };
   const Page = PAGES.find(([id]) => id === page)[2];
 
+  const source = info?.source === "real" ? "real" : "mock";
+
   return (
     <>
       <a className="skip" href="#main" onClick={(e) => { e.preventDefault(); document.getElementById("main")?.focus(); }}>Skip to content</a>
-      <div className="banner" role="note" data-testid="banner">
-        <strong>This A2A agent is deliberately hostile.</strong> Every card is shown as inert text, its replies are inert, and the generalist only returns the message it would send. Nothing is sent anywhere, and every off-box address is a reserved <code>.invalid</code> or example name.
-      </div>
-      <header className="top">
-        <h1>Hostile A2A</h1>
-        <nav aria-label="Pages">
+      <header className="shell-bar">
+        <span className="shell-brand"><span className="shell-logo" aria-hidden="true">P</span> Hostile A2A</span>
+        <nav className="shell-nav" aria-label="Pages">
           {PAGES.map(([id, label]) => <a key={id} href={`#/${id}`} aria-current={id === page ? "page" : undefined}>{label}</a>)}
         </nav>
-        <div className="tools-right">
-            <ShelfLink />
+        <span className="shell-right">
+          <ShelfLink />
           <ModeToggle info={info} onSelect={selectMode} />
           <button type="button" className="btn" aria-pressed={present} onClick={togglePresent}>Present</button>
-          <label className="inline">Theme
+          <label className="shell-theme">Theme
             <select value={theme} onChange={(e) => setThemeValue(e.target.value)} data-testid="theme">
               <option value="system">Auto</option>
               <option value="light">Light</option>
               <option value="dark">Dark</option>
             </select>
           </label>
-        </div>
+        </span>
       </header>
       <main className="page" id="main" tabIndex={-1}>
+        <div className="banner" role="note" data-testid="banner" data-state={source === "real" ? "live" : "mock"}>
+          <strong>{source === "real" ? "REAL mode. " : "MOCK mode. "}This A2A agent is deliberately hostile.</strong> Every card is shown as inert text, its replies are inert, and the generalist only returns the message it would send. Nothing is sent anywhere, and every off-box address is a reserved <code>.invalid</code> or example name.
+        </div>
         <Page present={present} theme={theme} />
         <p className="muted small" data-admin-only>The server serves cards and never scores or blocks. Pinning notices change; it does not judge content. Card signatures are not verified here.</p>
       </main>
