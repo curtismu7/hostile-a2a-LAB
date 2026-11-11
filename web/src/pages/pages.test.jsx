@@ -116,17 +116,23 @@ test("round trip: three steps, in order, with the diff, both hashes and both cli
   stub(roundTripRoutes(session.second()));
   render(<RoundTrip />);
   const b = (name) => screen.getByRole("button", { name });
+  // Exactly one primary button in every state of the flow: the step you are on, then Reset once it is finished.
+  const primaries = () => [...document.querySelectorAll("button.primary")].map((x) => x.textContent);
+  expect(primaries()).toEqual(["Approve fetch #1 (pin it)"]);
   expect(b("Fetch the card again (#2)")).toBeDisabled();
   expect(b("Compare the two clients")).toBeDisabled();
   await userEvent.click(b("Approve fetch #1 (pin it)"));
+  expect(primaries()).toEqual(["Fetch the card again (#2)"]);
   expect(await screen.findByTestId("step1")).toHaveTextContent("A refunds specialist.");
   expect(screen.getByTestId("step1")).toHaveTextContent(sha.before);
   expect(screen.getByTestId("step1").querySelector("mark")).toBeNull();
   expect(b("Approve fetch #1 (pin it)")).toBeDisabled();
   await userEvent.click(b("Fetch the card again (#2)"));
   expect((await screen.findByTestId("step2")).querySelector("mark")).toHaveTextContent("<IMPORTANT>");
+  expect(primaries()).toEqual(["Compare the two clients"]);
   await userEvent.click(b("Compare the two clients"));
   const s3 = await screen.findByTestId("step3");
+  expect(primaries()).toEqual(["Reset the flow"]);
   expect(s3).toHaveTextContent(sha.before + "ffff");
   expect(s3).toHaveTextContent(sha.after + "eeee");
   expect(s3).toHaveTextContent("A refunds specialist.");
@@ -138,6 +144,7 @@ test("round trip: three steps, in order, with the diff, both hashes and both cli
   await userEvent.click(b("Reset the flow"));
   expect(screen.queryByTestId("step1")).toBeNull();
   expect(b("Approve fetch #1 (pin it)")).toBeEnabled();
+  expect(primaries()).toEqual(["Approve fetch #1 (pin it)"]);
 });
 
 test("round trip: an invisible change and a look-alike letter show as [U+XXXX] chips, as text", async () => {

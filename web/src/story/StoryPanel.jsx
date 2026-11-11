@@ -58,7 +58,7 @@ export default function StoryPanel({ mode, present = false }) {
           <ol className="story__steps">
             {story.steps.map((s) => (
               <li key={s.n} className={s.n === current.n ? "is-current" : undefined}>
-                <button type="button" className="story__step" aria-current={s.n === current.n ? "step" : undefined} onClick={() => setActive(s.n)}>
+                <button type="button" className="story__step" aria-pressed={s.n === current.n} aria-current={s.n === current.n ? "step" : undefined} onClick={() => setActive(s.n)}>
                   <span className="story__n">{s.n}</span>{s.title}
                   {blocked && s.blocked && <span className="story__tag">blocked</span>}
                 </button>
