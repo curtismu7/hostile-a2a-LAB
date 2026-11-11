@@ -152,9 +152,9 @@ export default function Run({ present }) {
 
   return (
     <>
-      <StoryPanel mode="run" present={present} />
-      <h2>Run the delegation</h2>
+      <h1>Run the delegation</h1>
       <p className="lede">Pick a harmless task and a card. The offline generalist (no model) reads the Agent Card the way a trusting agent does and returns the message it would send, once through an ungoverned client and once through a pinned client.</p>
+      <StoryPanel mode="run" present={present} />
       <form className="card controls" onSubmit={(e) => { e.preventDefault(); go(); }}>
         <label>Card
           <select value={poison} onChange={(e) => setSel((s) => ({ ...s, poison: Number(e.target.value), task: POISONS[Number(e.target.value)].task }))}>

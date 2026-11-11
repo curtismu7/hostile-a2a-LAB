@@ -72,8 +72,7 @@ export default function RoundTrip({ present }) {
 
   return (
     <>
-      <StoryPanel mode="roundtrip" present={present} />
-      <h2>Card round trip: the agent changed overnight</h2>
+      <h1>Card round trip: the agent changed overnight</h1>
       <p className="lede">Three steps against the real hostile server. It answers fetch #1 with a clean card and every later fetch with a changed one. Choose how it changes before you start.</p>
       <div className="card controls">
         <label>What changes
@@ -81,6 +80,7 @@ export default function RoundTrip({ present }) {
             {CHANGES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
           </select>
         </label>
+      <StoryPanel mode="roundtrip" present={present} />
       </div>
       {error && <p role="alert" className="alert">Something went wrong: {error}</p>}
       <ol className="flow">

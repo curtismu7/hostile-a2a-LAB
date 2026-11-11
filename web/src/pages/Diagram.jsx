@@ -91,7 +91,7 @@ export default function Diagram({ present, theme = "system" }) {
 
   return (
     <>
-      <h2>How the pin sits in the path</h2>
+      <h1>How the pin sits in the path</h1>
       <p className="lede">Nothing in A2A discovery inspects card text, so a defence has to sit where the card is consumed. Drag any box. Simulate runs a poisoned card through the chosen client.</p>
       <div className="card controls">
         <label>Client

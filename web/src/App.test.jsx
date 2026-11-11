@@ -21,6 +21,22 @@ test("the hostile-server banner and the skip link are on every page", async () =
   }
 });
 
+test("the standard shell: a shell bar, the mock banner first in main, one h1 that names the page", async () => {
+  render(<App />);
+  expect(document.querySelectorAll("header.shell-bar")).toHaveLength(1);
+  const main = screen.getByRole("main");
+  expect(main.firstElementChild).toBe(screen.getByTestId("banner"));
+  expect(screen.getByTestId("banner")).toHaveTextContent(/MOCK mode/);
+  expect(screen.getByTestId("banner")).toHaveAttribute("data-state", "mock");
+  const titles = [["gallery", "Card poison gallery"], ["run", "Run the delegation"], ["roundtrip", "Card round trip: the agent changed overnight"], ["limits", "Honest limits"], ["diagram", "How the pin sits in the path"]];
+  for (const [id, title] of titles) {
+    window.location.hash = `#/${id}`;
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    expect(await screen.findByRole("heading", { level: 1, name: title })).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+  }
+});
+
 test("the five pages are gallery, run, round trip, limits and diagram", () => {
   expect(PAGES.map(([id]) => id)).toEqual(["gallery", "run", "roundtrip", "limits", "diagram"]);
 });

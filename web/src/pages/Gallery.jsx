@@ -26,10 +26,11 @@ export function badgesFor(item) {
 
 export const runLink = (item) => `#/run?poison=${item.requireSignatures ? "unsigned" : item.variant}`;
 
-export function PoisonCard({ item }) {
+// `as` is the card's heading level: h4 under the gallery's h3 category, h3 under the limits page's h2 sections.
+export function PoisonCard({ item, as: Heading = "h4" }) {
   return (
     <article className="poison" data-testid={`poison-${item.id}`}>
-      <h4><code>{item.id}</code> {!item.servedHere && <span className="muted small">described, not served</span>}</h4>
+      <Heading><code>{item.id}</code> {!item.servedHere && <span className="muted small">described, not served</span>}</Heading>
       <dl>
         <dt>What it does</dt><dd><Untrusted text={item.what} /></dd>
         <dt>How it lands</dt><dd><Untrusted text={item.how} /></dd>
@@ -49,9 +50,9 @@ export default function Gallery({ present }) {
   useEffect(() => { getCatalog().then(setCatalog).catch((e) => setError(e.message)); }, []);
   return (
     <>
-      <StoryPanel mode="gallery" present={present} />
-      <h2>Card poison gallery</h2>
+      <h1>Card poison gallery</h1>
       <p className="lede">Every poison the server can put in an Agent Card, grouped by where it hides. The badges say which control would catch it, taken from the catalog data. Nothing here is executed.</p>
+      <StoryPanel mode="gallery" present={present} />
       {error && <p role="alert" className="alert">Could not load the catalog: {error}</p>}
       {!catalog && !error && <p className="muted">Loading the catalog...</p>}
       {catalog && CATEGORIES.map(([id, title]) => {
