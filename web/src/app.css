@@ -17,7 +17,8 @@ code { font-size: 0.85rem; overflow-wrap: anywhere; }
 
 /* App shell (standard section 1): Core Dark bar in both themes, Ping Red gradient rule, pill nav. */
 .shell-bar { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; padding: 0.6rem 1.25rem; margin: 0 -16px;
-  background: var(--box-dark); color: var(--on-box); border-bottom: 3px solid transparent; border-image: var(--accent-gradient) 1; }
+  background: var(--box-dark); color: var(--on-box); border-bottom: 3px solid transparent; border-image: var(--accent-gradient) 1; position: relative; }
+html { font-size: var(--fs, 16px); }
 .shell-brand { display: inline-flex; align-items: center; gap: 0.6rem; font-weight: 700; letter-spacing: 0.02em; }
 .shell-logo { width: 1.9rem; height: 1.9rem; border-radius: 4px; background: var(--accent-gradient); color: var(--on-accent); display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem; }
 .shell-nav { display: flex; gap: 0.25rem; flex: 1; flex-wrap: wrap; min-width: 0; }

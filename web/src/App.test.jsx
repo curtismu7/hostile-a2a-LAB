@@ -43,11 +43,11 @@ test("the five pages are gallery, run, round trip, limits and diagram", () => {
 
 test("the theme picker and the presenter toggle set the presenter flag", async () => {
   render(<App />);
-  await userEvent.selectOptions(screen.getByTestId("theme"), "light");
+  await userEvent.selectOptions(screen.getByTestId("theme-select"), "light");
   expect(document.documentElement.dataset.theme).toBe("light");
-  await userEvent.selectOptions(screen.getByTestId("theme"), "dark");
+  await userEvent.selectOptions(screen.getByTestId("theme-select"), "dark");
   expect(document.documentElement.dataset.theme).toBe("dark");
-  const present = screen.getByRole("button", { name: "Present" });
+  const present = screen.getByTestId("presenter");
   await userEvent.click(present);
   expect(present).toHaveAttribute("aria-pressed", "true");
   expect(document.documentElement.dataset.present).toBe("1");

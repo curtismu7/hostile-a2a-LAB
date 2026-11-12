@@ -1,13 +1,17 @@
 // Copied from hostile-mcp (web/src/App.jsx) and adapted. Not imported across repos.
 import React, { useEffect, useState } from "react";
+import fs from "node:fs";
 import ShelfLink from "./components/ShelfLink.jsx";
 import Gallery from "./pages/Gallery.jsx";
 import Run from "./pages/Run.jsx";
 import RoundTrip from "./pages/RoundTrip.jsx";
 import Limits from "./pages/Limits.jsx";
 import Diagram from "./pages/Diagram.jsx";
-import ModeToggle from "./components/ModeToggle.jsx";
+import TopMenu, { applyFontSize } from "./top-menu/TopMenu.jsx";
 import { getInfo, setMode } from "./lib/api.js";
+
+// Version for the TopMenu About button: read once from the lab root package.json.
+const LAB_VERSION = (() => { try { return JSON.parse(fs.readFileSync(new URL("../../package.json", import.meta.url), "utf8")).version || null; } catch { return null; } })();
 
 // Hash-routed pages (no router dependency). The banner is always on screen: this server is hostile on purpose.
 export const PAGES = [
@@ -27,6 +31,7 @@ const pageFromHash = () => {
 export default function App() {
   const [page, setPage] = useState(pageFromHash);
   const [theme, setTheme] = useState(() => (["light", "dark"].includes(read("hostile-a2a.theme", "")) ? read("hostile-a2a.theme", "") : "system"));
+  const [fontStep, setFontStep] = useState(() => { const f = read("hostile-a2a.font", "M"); return ["S", "M", "L"].includes(f) ? f : "M"; });
   const [present, setPresent] = useState(() => read("hostile-a2a.present", "0") === "1");
   const [info, setInfo] = useState(null);
 
@@ -42,6 +47,7 @@ export default function App() {
   useEffect(() => {
     if (present) document.documentElement.dataset.present = "1"; else delete document.documentElement.dataset.present;
   }, [present]);
+  useEffect(() => { applyFontSize(fontStep); write("hostile-a2a.font", fontStep); }, [fontStep]);
 
   const setThemeValue = (t) => { setTheme(t); write("hostile-a2a.theme", t); };
   const togglePresent = () => { write("hostile-a2a.present", present ? "0" : "1"); setPresent(!present); };
@@ -60,16 +66,16 @@ export default function App() {
           {PAGES.map(([id, label]) => <a key={id} href={`#/${id}`} aria-current={id === page ? "page" : undefined}>{label}</a>)}
         </nav>
         <span className="shell-right">
-          <ShelfLink />
-          <ModeToggle info={info} onSelect={selectMode} />
-          <button type="button" className="btn" aria-pressed={present} onClick={togglePresent}>Present</button>
-          <label className="shell-theme">Theme
-            <select value={theme} onChange={(e) => setThemeValue(e.target.value)} data-testid="theme">
-              <option value="system">Auto</option>
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
-            </select>
-          </label>
+          <TopMenu
+            mode={{ value: source, onChange: selectMode, realAvailable: info ? info.realAvailable : null, realHint: "Real is not available: this app has no live version (an offline hostile server and an offline victim, no model, no network). Mock is the whole demo." }}
+            theme={{ value: theme, onChange: setThemeValue }}
+            fontSize={{ value: fontStep, onChange: setFontStep }}
+            present={{ active: present, onToggle: togglePresent }}
+            help={{ href: "https://github.com/curtismu7/hostile-a2a-LAB#readme" }}
+            version={LAB_VERSION}
+          >
+            <ShelfLink />
+          </TopMenu>
         </span>
       </header>
       <main className="page" id="main" tabIndex={-1}>
