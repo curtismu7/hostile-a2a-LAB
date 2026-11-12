@@ -8,7 +8,7 @@ import RoundTrip from "./pages/RoundTrip.jsx";
 import Limits from "./pages/Limits.jsx";
 import Diagram from "./pages/Diagram.jsx";
 import TopMenu, { applyFontSize } from "./top-menu/TopMenu.jsx";
-import { getInfo, setMode } from "./lib/api.js";
+import { getInfo, resetSessions, setMode } from "./lib/api.js";
 
 // Version for the TopMenu About button: read once from the lab root package.json.
 const LAB_VERSION = (() => { try { return JSON.parse(fs.readFileSync(new URL("../../package.json", import.meta.url), "utf8")).version || null; } catch { return null; } })();
@@ -53,6 +53,8 @@ export default function App() {
   const togglePresent = () => { write("hostile-a2a.present", present ? "0" : "1"); setPresent(!present); };
   // Rule 19: the Mock/Real toggle. The server's answer is what the toggle shows (a refusal leaves it unchanged).
   const selectMode = async (source) => { try { setInfo(await setMode(source)); } catch { /* refused: the toggle keeps the server's last answer */ } };
+  const [notice, setNotice] = useState("");
+  const reset = async () => { try { await resetSessions(); setNotice("Reset: every card session is gone; the fixtures never change."); } catch { setNotice("Reset failed."); } };
   const Page = PAGES.find(([id]) => id === page)[2];
 
   const source = info?.source === "real" ? "real" : "mock";
@@ -74,6 +76,7 @@ export default function App() {
             present={{ active: present, onToggle: togglePresent }}
             help={{ href: "https://github.com/curtismu7/hostile-a2a-LAB#readme" }}
             version={LAB_VERSION}
+            onReset={reset}
           >
             <ShelfLink />
           </TopMenu>
@@ -85,6 +88,7 @@ export default function App() {
           <strong>{source === "real" ? "REAL mode. " : "MOCK mode. "}This A2A agent is deliberately hostile.</strong> Every card is shown as inert text, its replies are inert, and the generalist only returns the message it would send. Nothing is sent anywhere, and every off-box address is a reserved <code>.invalid</code> or example name.
         </div>
         <Page present={present} theme={theme} />
+        {notice && <p className="muted small" role="status" data-testid="notice">{notice}</p>}
         <p className="muted small" data-admin-only>The server serves cards and never scores or blocks. Pinning notices change; it does not judge content. Card signatures are not verified here.</p>
       </main>
     </>

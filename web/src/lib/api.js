@@ -18,3 +18,4 @@ export const newSession = (variant, requireSignatures) => post("/api/card-sessio
 export const approve = (id) => post(`/api/card-session/${id}/approve`);
 export const compare = (id) => post(`/api/card-session/${id}/compare`);
 export const endSession = (id) => request(`/api/card-session/${id}`, { method: "DELETE" }).catch(() => {});
+export const resetSessions = () => post("/api/reset");
