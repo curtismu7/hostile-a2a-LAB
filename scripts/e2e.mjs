@@ -148,9 +148,9 @@ try {
   await page.emulateMedia({ colorScheme: 'dark' });
   await shot('6a-run-dark');
   await page.emulateMedia({ colorScheme: 'light' });
-  await page.getByTestId('theme').selectOption('light');
+  await page.getByTestId('theme-select').selectOption('light');
   check((await page.evaluate(() => document.documentElement.dataset.theme)) === 'light', 'the theme picker forces light');
-  await page.getByTestId('theme').selectOption('dark');
+  await page.getByTestId('theme-select').selectOption('dark');
   check((await page.evaluate(() => document.documentElement.dataset.theme)) === 'dark', 'the theme picker forces dark');
   await shot('6b-run-forced-dark');
   await page.setViewportSize({ width: 375, height: 800 });
