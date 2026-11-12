@@ -66,7 +66,8 @@ export default function App() {
           {PAGES.map(([id, label]) => <a key={id} href={`#/${id}`} aria-current={id === page ? "page" : undefined}>{label}</a>)}
         </nav>
         <span className="shell-right">
-          <TopMenu
+          <span className="mode-toggle" style={{ display: "contents" }}>
+            <TopMenu
             mode={{ value: source, onChange: selectMode, realAvailable: info ? info.realAvailable : null, realHint: "Real is not available: this app has no live version (an offline hostile server and an offline victim, no model, no network). Mock is the whole demo." }}
             theme={{ value: theme, onChange: setThemeValue }}
             fontSize={{ value: fontStep, onChange: setFontStep }}
@@ -76,6 +77,7 @@ export default function App() {
           >
             <ShelfLink />
           </TopMenu>
+          </span>
         </span>
       </header>
       <main className="page" id="main" tabIndex={-1}>
