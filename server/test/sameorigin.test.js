@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 import { createApp } from '../src/app.js';
 import { createHealth } from '../src/health.js';
+import { allPassed, runChecks } from '../src/doctor.js';
 
 const NAME = 'hostile-a2a.local.ping-devops.com';
 const PROXY_ORIGIN = 'https://local.ping-devops.com:8443';
@@ -12,7 +13,7 @@ const PROXIED = { host: `${NAME}:4750`, 'x-forwarded-host': 'local.ping-devops.c
 const RUN = JSON.stringify({ task: 'refund order 42', mode: 'pinned' });
 
 const start = async (opts) => {
-  const health = createHealth(); await health.ready;
+  const health = createHealth({ demoId: 'hostile-a2a', demoName: 'Hostile A2A', version: '0.1.0', runChecks, allPassed });
   const server = await new Promise((r) => { const s = createApp({ health, ...opts }).listen(0, '127.0.0.1', () => r(s)); });
   return { port: server.address().port, close: () => { health.stop?.(); server.closeAllConnections?.(); server.close(); } };
 };

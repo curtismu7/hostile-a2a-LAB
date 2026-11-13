@@ -3,12 +3,13 @@ import test from 'node:test';
 import { startHttpServer } from '../src/app.js';
 import { VARIANT_IDS } from '../src/card.js';
 import { createHealth } from '../src/health.js';
+import { allPassed, runChecks } from '../src/doctor.js';
 import { createSessions } from '../src/session.js';
 import { scanHosts } from '../src/safety.js';
 import { guardNetwork } from './netguard.js';
 
 async function withServer(fn, opts) {
-  const health = createHealth();
+  const health = createHealth({ demoId: 'hostile-a2a', demoName: 'Hostile A2A', version: '0.1.0', runChecks, allPassed });
   const guard = guardNetwork();
   const server = await startHttpServer(0, '127.0.0.1', { health, sessions: createSessions(), ...opts });
   const base = `http://127.0.0.1:${server.port}`;

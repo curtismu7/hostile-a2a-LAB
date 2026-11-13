@@ -1,4 +1,3 @@
-// Copied from hostile-mcp (web/src/story/fill.js), itself from the ID-JAG kit (id-jag-standalone). Not imported across repos.
 // Copied from the ID-JAG kit (id-jag-standalone web/src/story/fill.js). Unchanged.
 // Story text is written once with tokens; a vertical pack supplies the names and nouns.
 //   {{lena}}          a cast id, replaced by that person's name (the {{cast.*}} family: the id resolves through vertical.cast)

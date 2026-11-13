@@ -7,6 +7,7 @@ import express from 'express';
 import { VARIANT_IDS } from './card.js';
 import { catalog } from './catalog.js';
 import { payloadCorpus, scanPayloads } from './corpus.js';
+import { allPassed, runChecks } from './doctor.js';
 import { createHealth } from './health.js';
 import { createHostileRouter } from './hostile.js';
 import { CATCHES, LIMITS } from './pinning.js';
@@ -23,6 +24,15 @@ import { makeHostGuard, makeOriginGuard, parseLabHosts, proxyHostSet } from './s
 const WEB_DIST = process.env.WEB_DIST || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../web/dist');
 const bad = (res, message, status = 400) => res.status(status).json({ error: status === 404 ? 'not_found' : status === 409 ? 'conflict' : 'bad_request', message });
 
+const { version } = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+const defaultHealth = () => createHealth({
+  demoId: 'hostile-a2a',
+  demoName: 'Hostile A2A',
+  version,
+  runChecks: () => runChecks(),
+  allPassed,
+});
+
 const MODES = ['ungoverned', 'pinned'];
 const STAGES = ['first', 'later'];
 const MAX_TASK = 300;
@@ -35,7 +45,7 @@ function checkVariant(body) {
   return null;
 }
 
-export function createApp({ health = createHealth(), sessions = createSessions(), publicBaseUrl, port, customer = loadCustomer(),
+export function createApp({ health = defaultHealth(), sessions = createSessions(), publicBaseUrl, port, customer = loadCustomer(),
   labHosts = parseLabHosts(process.env.LAB_ALLOWED_HOSTS), labPort = Number(process.env.PORT) || 4750 } = {}) {
   const app = express();
   app.disable('x-powered-by');

@@ -3,10 +3,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { startHttpServer } from '../src/app.js';
 import { createHealth } from '../src/health.js';
+import { allPassed, runChecks } from '../src/doctor.js';
 import { createSessions } from '../src/session.js';
 
 async function withServer(fn) {
-  const health = createHealth();
+  const health = createHealth({ demoId: 'hostile-a2a', demoName: 'Hostile A2A', version: '0.1.0', runChecks, allPassed });
   const server = await startHttpServer(0, '127.0.0.1', { health, sessions: createSessions() });
   const base = `http://127.0.0.1:${server.port}`;
   const post = (body) => fetch(`${base}/api/mode`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
