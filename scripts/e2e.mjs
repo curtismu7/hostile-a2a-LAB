@@ -136,7 +136,7 @@ try {
   await sleep(1800);
   check((await text('caption')).includes('Step 4 of 4'), 'Simulate walks to the last step at 4x');
   await shot('5a-diagram-dragged');
-  await page.getByRole('button', { name: 'Reset' }).click();
+  await page.getByRole('button', { name: 'Reset' }).last().click();
   await sleep(500);
   const reset = await node.boundingBox();
   check(Math.abs(reset.y - before.y) < 3 && (await text('caption')).includes('Press Simulate'), 'Reset puts the box and the caption back');
@@ -173,7 +173,8 @@ try {
       navWidth: document.querySelector('.shell-nav').getBoundingClientRect().width,
       bar: document.querySelector('.shell-bar').getBoundingClientRect().height,
     }));
-    check(m.overflow <= 0 && m.tallestLink <= 40 && m.navWidth >= 300 && m.bar <= 160, `tablet (${width}px): no page scroll, one line per nav link, nav ${Math.round(m.navWidth)}px wide, bar ${Math.round(m.bar)}px high`);
+    // The shared TopMenu is a two-row bar (controls row + theme/text-size row): it is taller than the old custom header.
+    check(m.overflow <= 0 && m.tallestLink <= 40 && m.navWidth >= 300 && m.bar <= 220, `tablet (${width}px): no page scroll, one line per nav link, nav ${Math.round(m.navWidth)}px wide, bar ${Math.round(m.bar)}px high`);
     await shot(`8-tablet-${width}`);
   }
 
