@@ -141,3 +141,26 @@ only the placeholder `FAKE-TOKEN-NOT-REAL`.
 Server and card payloads: AI-DEMO2 `standalone/hostile-a2a-agent` (MIT). Scanner rule table: `mcp-tools` (from AI-DEMO2
 `standalone/mcp-scanner`). Pattern: `hostile-mcp`. Code is copied with source headers, never imported across repos.
 See [LICENSE](LICENSE).
+
+---
+
+## Real mode: through the PingOne Privilege gateway
+
+Real mode here is one live call through the SE PingOne Privilege gateway
+(`https://mcpgw.ai-demo.ping-devops.com`) with an agent access key from the shared settings
+file (`~/Development/.env`, or the file `STANDALONE_ENV` names).
+
+**Privilege objects this lab uses:**
+
+| Object | Value |
+|---|---|
+| Gateway | `mcpgw.ai-demo.ping-devops.com` (cluster `ai-demo-cmuir`) |
+| Door (Agentic App) | `hostile-a2a` — client path `/hostile-a2a/mcp` |
+| Caller | agent access key `HAA_GW_KEY_LAB_AGENT` (write-only, never shown) |
+| Backend | `aggregate` = the gateway's MCP aggregate over `opensearch` (9 tools) + `banking-mcp` (33 tools); `aggregate-limited` = the same members with a tool filter |
+
+**What runs in Real:** the **Privilege gateway check** (`POST /api/gateway-check`, card on the
+page) — one live `tools/list` through the door with the key, then one `tools/call` probe of a
+tool no policy grants, so you see the gateway's own refusal shape. The gateway's words come
+back unaltered (keys scrubbed). Settings keys: `HAA_GW_URL`, `HAA_GW_APPS`,
+`HAA_GW_KEY_<NAME>` (optional `HAA_GW_VERSION`).

@@ -9,6 +9,7 @@ import Limits from "./pages/Limits.jsx";
 import Diagram from "./pages/Diagram.jsx";
 import TopMenu, { applyFontSize } from "./top-menu/TopMenu.jsx";
 import { getInfo, resetSessions, setMode } from "./lib/api.js";
+import PrivilegeCheck from "./privilege-check/PrivilegeCheck.jsx";
 
 // Version for the TopMenu About button: read once from the lab root package.json.
 const LAB_VERSION = (() => { try { return JSON.parse(fs.readFileSync(new URL("../../package.json", import.meta.url), "utf8")).version || null; } catch { return null; } })();
@@ -84,6 +85,8 @@ export default function App() {
         </span>
       </header>
       <main className="page" id="main" tabIndex={-1}>
+
+        <PrivilegeCheck />
         <div className="banner" role="note" data-testid="banner" data-state={source === "real" ? "live" : "mock"}>
           <strong>{source === "real" ? "REAL mode. " : "MOCK mode. "}This A2A agent is deliberately hostile.</strong> Every card is shown as inert text, its replies are inert, and the generalist only returns the message it would send. Nothing is sent anywhere, and every off-box address is a reserved <code>.invalid</code> or example name.
         </div>
