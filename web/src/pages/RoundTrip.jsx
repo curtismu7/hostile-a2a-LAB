@@ -2,9 +2,10 @@
 // 1 approve fetch #1, 2 come back later (fetch #2), 3 compare. Each step is a real call against a per-visit session.
 import React, { useEffect, useRef, useState } from "react";
 import { approve, compare, endSession, newSession, runVictim } from "../lib/api.js";
-import { Revealed, Untrusted, pretty } from "../lib/Untrusted.jsx";
+import { Revealed, Untrusted } from "../lib/Untrusted.jsx";
+import Json from "../components/JsonPane.jsx";
 import StoryPanel from "../story/StoryPanel.jsx";
-import { outcome } from "./Run.jsx";
+import { MESSAGE_HOT, outcome } from "./Run.jsx";
 
 export const CHANGES = [
   { id: "rug-pull", label: "Instructions appear in the description and the skill", task: "Please refund my last order" },
@@ -141,7 +142,7 @@ export default function RoundTrip({ present }) {
                   <h4>Ungoverned client</h4>
                   <p className={`verdict ${outcome(ungoverned, pinned).level}`} role="status">ACCEPTED: {outcome(ungoverned, pinned).label}</p>
                   {ungoverned.victim.delegation
-                    ? <><p className="small">Message it would send (not sent):</p><Untrusted text={pretty(ungoverned.victim.delegation.request)} block /></>
+                    ? <><p className="small">Message it would send (not sent):</p><Json value={ungoverned.victim.delegation.request} label="The message it would send" testId="request-roundtrip" hot={MESSAGE_HOT} /></>
                     : <p>No message.</p>}
                 </div>
               </div>

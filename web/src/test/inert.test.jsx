@@ -1,11 +1,13 @@
 import React from "react";
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, expect, test } from "vitest";
+import { afterEach, beforeEach, expect, test } from "vitest";
 import { Revealed, Untrusted, segments } from "../lib/Untrusted.jsx";
 import { Column } from "../pages/Run.jsx";
+import { setJsonView } from "../components/JsonPane.jsx";
 import { PoisonCard } from "../pages/Gallery.jsx";
 import { XSS, catalog, run } from "./fixtures.js";
 
+beforeEach(() => { setJsonView("form"); });
 afterEach(() => { cleanup(); delete window.__pwned; });
 
 test("a script / onerror payload renders as text and nothing executes", () => {
@@ -50,4 +52,25 @@ test("[U+XXXX] chips are text spans in Untrusted and Revealed, and look-alike le
   const chips = [...container.querySelectorAll(".chip")].map((c) => c.textContent);
   expect(chips).toEqual(["[U+200B]", "[U+E0042]", "[U+0440]"]);
   expect(container.textContent).toContain("[U+0440]rocess");
+});
+
+// The hostile payload inside the JSON panes (the message it would send, the poisoned call's arguments): text in both views, never markup,
+// and control / bidi characters show as visible escapes.
+test.each(["form", "raw"])("hostile text inside the JSON panes stays inert text in the %s view, and a bidi override is shown as an escape", (view) => {
+  setJsonView(view);
+  const evil = run("ungoverned", { landed: true });
+  const BIDI = "a\u202eb";
+  evil.victim.delegation.request.params.message.parts[0].text = `${XSS} ${BIDI}`;
+  evil.victim.delegation.request.params.message.metadata = { [XSS]: XSS };
+  evil.victim.steps[0].arguments = { to: XSS, [BIDI]: 1 };
+  const { container } = render(<Column title="Ungoverned client" run={evil} />);
+  const panes = [screen.getByTestId("request-ungoverned"), screen.getByTestId("step-args-ungoverned-0")];
+  expect(panes.every((p) => p.closest(".jsonbox").dataset.view === view)).toBe(true);
+  expect(container.querySelector("script, img, [onerror]")).toBeNull();
+  expect(container.innerHTML).not.toContain("<script");
+  expect(window.__pwned).toBeUndefined();
+  expect(panes[0].textContent).toContain("window.__pwned = 1");
+  expect(panes[0].textContent).toContain("a\\u202eb");
+  expect(panes[1].textContent).toContain("a\\u202eb");
+  expect(container.textContent).not.toContain("\u202e");
 });
