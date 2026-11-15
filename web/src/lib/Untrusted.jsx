@@ -45,5 +45,3 @@ export function Revealed({ text, block = false }) {
   const shown = String(text ?? "").replace(LOOKALIKE, (c) => `[U+${c.codePointAt(0).toString(16).toUpperCase().padStart(4, "0")}]`);
   return <Tag className={`untrusted${block ? " untrusted--block" : ""}`} data-testid="revealed">{pieces(shown, false)}</Tag>;
 }
-
-export const pretty = (value) => JSON.stringify(value, null, 2);

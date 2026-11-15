@@ -2,7 +2,8 @@
 // returns the message it WOULD send, and an ungoverned and a pinned client side by side.
 import React, { useState } from "react";
 import { runVictim } from "../lib/api.js";
-import { Revealed, Untrusted, pretty } from "../lib/Untrusted.jsx";
+import { Revealed, Untrusted } from "../lib/Untrusted.jsx";
+import Json from "../components/JsonPane.jsx";
 import StoryPanel from "../story/StoryPanel.jsx";
 
 export const TASKS = [
@@ -32,6 +33,9 @@ const FINDING_TEXT = {
   "scanner-finding": "the scanner rules found instructions, a leak request or hidden characters",
   unpinned: "nothing was approved yet, so there was nothing to compare",
 };
+// Keys that matter in this lab's payloads: what the poison adds to the message (the metadata and the fake secrets in it) and what a poisoned tool call is told to move.
+export const MESSAGE_HOT = ["metadata", "bearerToken", "credentials", "conversation"];
+const ARGUMENT_HOT = ["amount", "to"];
 const PIN_IDS = ["origin-mismatch", "unsigned-policy", "skill-added", "changed"];
 
 export function outcome(run, other) {
@@ -110,11 +114,11 @@ export function Column({ title, run, other }) {
       {!d ? <p className="muted">No message. {run.victim.notes[0]}</p> : (
         <>
           <p className="small">To <Revealed text={d.to} />. Sent: <strong>{String(d.sent)}</strong> (the generalist only returns the message as data).</p>
-          <Untrusted text={pretty(d.request)} block />
+          <Json value={d.request} label="The message it would send" testId={`request-${run.mode}`} hot={MESSAGE_HOT} />
           {run.victim.steps.length > 0 && (
             <>
               <p className="small">Steps it would run first (never executed):</p>
-              <ol className="calls">{run.victim.steps.map((s, i) => <li key={i} className="poison-call"><code>{s.tool}</code> <Untrusted text={JSON.stringify(s.arguments)} /> <span className="pill no">poison</span></li>)}</ol>
+              <ol className="calls">{run.victim.steps.map((s, i) => <li key={i} className="poison-call"><code>{s.tool}</code> <span className="pill no">poison</span><Json value={s.arguments} label="Arguments of the poisoned call" testId={`step-args-${run.mode}-${i}`} hot={ARGUMENT_HOT} /></li>)}</ol>
             </>
           )}
           <ul className="small">{run.victim.reasons.map((r, i) => <li key={i}>{r.poison && <span className="pill no">poison</span>} <Untrusted text={r.text} /></li>)}</ul>
