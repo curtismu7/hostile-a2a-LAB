@@ -20,6 +20,18 @@ import { loadCustomer, DEFAULT_CUSTOMER } from './customer.js';
 import { workspaceMiddleware } from './workspace.js';
 import { shelfInfo } from './shelfLink.js';
 import { makeHostGuard, makeOriginGuard, parseLabHosts, proxyHostSet } from './sameorigin.js';
+import { readFileSettings, doorConfig, createRealDoor } from './gatewayReal.js';
+
+// Real mode = the shared gateway hop: an agent key from the shared settings file calling a live Privilege door.
+// The environment wins over the file: HAA_* variables overlay the parsed file text.
+export function realDoorFrom(env = process.env) {
+  const p = env.STANDALONE_ENV || `${env.HOME || ''}/Development/.env`;
+  let text = '';
+  try { text = fs.readFileSync(p, 'utf8'); } catch { /* the environment may still carry the keys */ }
+  for (const [k, v] of Object.entries(env)) if (k.startsWith('HAA_GW_') && v) text += `\n${k}=${v}`;
+  const cfg = doorConfig(text, 'HAA');
+  return cfg.ok ? createRealDoor({ config: cfg, clientInfo: { name: 'hostile-a2a', version: '0.1.0' } }) : null;
+}
 
 const WEB_DIST = process.env.WEB_DIST || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../web/dist');
 const bad = (res, message, status = 400) => res.status(status).json({ error: status === 404 ? 'not_found' : status === 409 ? 'conflict' : 'bad_request', message });
@@ -69,8 +81,26 @@ export function createApp({ health = defaultHealth(), sessions = createSessions(
   api.post('/mode', (req, res) => {
     const b = req.body;
     if (b === null || typeof b !== 'object' || Array.isArray(b) || Object.keys(b).length !== 1 || !['mock', 'real'].includes(b.source)) return bad(res, 'body must be exactly {source: "mock" or "real"}');
-    if (b.source === 'real') return bad(res, NO_REAL, 409);
+    if (b.source === 'real') {
+      const door = realDoorFrom();
+      if (!door) return bad(res, NO_REAL, 409);
+      return res.json({ ...infoBody(), source: 'real', doors: door.apps, gateway: door.origin });
+    }
     return res.json(infoBody(req));
+  });
+
+  // One real gateway check: tools/list through the door, then the gateway's refusal for a tool nothing grants.
+  api.post('/gateway-check', async (req, res) => {
+    const door = realDoorFrom();
+    if (!door) return res.status(409).json({ error: 'real_not_available', message: 'Real is not configured (the HAA_* settings are missing).' });
+    if (req.body && Object.keys(req.body).some((k) => !['app', 'caller'].includes(k))) return res.status(400).json({ error: 'bad_request', detail: 'the only accepted body fields are { "app", "caller" }' });
+    const app = String(req.body?.app || door.apps[0]);
+    if (!door.apps.includes(app)) return res.status(400).json({ error: 'bad_app', detail: `app must be one of ${door.apps.join(', ')}` });
+    const caller = req.body?.caller && door.callers.some((c) => c.id === req.body.caller) ? req.body.caller : door.callers[0].id;
+    const listing = await door.list(app, caller);
+    const out = { app, caller, gateway: door.origin, listing };
+    if (listing.ok) out.refusal = await door.call(app, caller, 'hostile_a2a_refusal_probe_tool', {});
+    res.json(out);
   });
   api.get('/catalog', (_req, res) => res.json({ ...catalog(), customer: { ...DEFAULT_CUSTOMER, ...customer } }));
   // The payload host scan, run on demand: every payload the server can put on the wire, checked for any non-reserved host.
