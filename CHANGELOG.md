@@ -2,6 +2,8 @@
 
 ## 0.1.0 (in progress)
 
+- Verification mark in the header: the shared `VerifyMark` (vendored from AI-DEMO-Standalone `shared/verify-mark`, byte for byte, pinned) shows this lab's Verified / In progress mark from the demo shelf, inside the top menu beside the Shelf link. It reads the same `GET /api/shelf` call the Shelf link makes, so it shows through the lab-proxy and nothing when the lab is opened on its own port, when the shelf has no mark for it, or when the shelf is unreachable.
+
 - Moved the default port from 4901 to 4750 (Vite dev server 4902 to 4751): 4901 belongs to mcp-auth-conformance-LAB (range 4900-4949), so the shelf showed a port clash.
 
 - HA0: scaffold; server ported from AI-DEMO2 `standalone/hostile-a2a-agent` (golden-wire test); card variants and the per-session card rug-pull; card scanner rules; pinned-card client; offline delegating victim; API and `GET /api/health` (`demo-health/1`); doctor; CI. Web UI not built yet (HA1 below).

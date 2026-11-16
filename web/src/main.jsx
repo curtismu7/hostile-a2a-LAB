@@ -6,6 +6,8 @@ import "./standalone-ui.css";
 import "./top-menu/top-menu.css";
 // The shared JSON pane (Rule 24): Form | JSON toggle, theme-token colors, full view. Vendored, never edited.
 import "./components/JsonPane.css";
+// The shared Verified / In progress badge (vendored, never edited): pinned by test/verify-mark.pin.test.js.
+import "./components/VerifyMark.css";
 import "./app.css";
 
 createRoot(document.getElementById("root")).render(<App />);
