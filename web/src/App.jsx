@@ -86,10 +86,10 @@ export default function App() {
       </header>
       <main className="page" id="main" tabIndex={-1}>
 
-        {page === "run" || page === "roundtrip" || page === "diagram" ? <PrivilegeCheck /> : <PrivilegeCheck primaryRetry />}
         <div className="banner" role="note" data-testid="banner" data-state={source === "real" ? "live" : "mock"}>
           <strong>{source === "real" ? "REAL mode. " : "MOCK mode. "}This A2A agent is deliberately hostile.</strong> Every card is shown as inert text, its replies are inert, and the generalist only returns the message it would send. Nothing is sent anywhere, and every off-box address is a reserved <code>.invalid</code> or example name.
         </div>
+        {page === "run" || page === "roundtrip" || page === "diagram" ? <PrivilegeCheck /> : <PrivilegeCheck primaryRetry />}
         <Page present={present} theme={theme} />
         {notice && <p className="muted small" role="status" data-testid="notice">{notice}</p>}
         <p className="muted small" data-admin-only>The server serves cards and never scores or blocks. Pinning notices change; it does not judge content. Card signatures are not verified here.</p>

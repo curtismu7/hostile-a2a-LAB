@@ -146,15 +146,15 @@ See [LICENSE](LICENSE).
 
 ## Real mode: through the PingOne Privilege gateway
 
-Real mode here is one live call through the SE PingOne Privilege gateway
-(`https://mcpgw.ai-demo.ping-devops.com`) with an agent access key from the shared settings
+Real mode here is one live call through the SE PingOne Privilege gateway (its URL is the
+`HAA_GW_URL` value in the shared settings file) with an agent access key from the same settings
 file (`~/Development/.env`, or the file `STANDALONE_ENV` names).
 
 **Privilege objects this lab uses:**
 
 | Object | Value |
 |---|---|
-| Gateway | `mcpgw.ai-demo.ping-devops.com` (cluster `ai-demo-cmuir`) |
+| Gateway | the SE PingOne Privilege gateway: URL from `HAA_GW_URL` in the shared settings file (it runs on the SE cluster) |
 | Door (Agentic App) | `hostile-a2a` — client path `/hostile-a2a/mcp` |
 | Caller | agent access key `HAA_GW_KEY_LAB_AGENT` (write-only, never shown) |
 | Backend | `aggregate` = the gateway's MCP aggregate over `opensearch` (9 tools) + `banking-mcp` (33 tools); `aggregate-limited` = the same members with a tool filter |
