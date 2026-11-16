@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import fs from "node:fs";
 import ShelfLink from "./components/ShelfLink.jsx";
+import VerifyMark from "./components/VerifyMark.jsx";
 import Gallery from "./pages/Gallery.jsx";
 import Run from "./pages/Run.jsx";
 import RoundTrip from "./pages/RoundTrip.jsx";
@@ -80,6 +81,7 @@ export default function App() {
             onReset={reset}
           >
             <ShelfLink />
+            <VerifyMark id="hostile-a2a" />
           </TopMenu>
           </span>
         </span>
