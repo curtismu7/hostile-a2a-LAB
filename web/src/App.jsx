@@ -9,6 +9,8 @@ import RoundTrip from "./pages/RoundTrip.jsx";
 import Limits from "./pages/Limits.jsx";
 import Diagram from "./pages/Diagram.jsx";
 import TopMenu, { applyFontSize } from "./top-menu/TopMenu.jsx";
+import TalkTrackDialog from "./talk-track/TalkTrackDialog.jsx";
+import { pageTalkSteps } from "./story/StoryPanel";
 import { getInfo, resetSessions, setMode } from "./lib/api.js";
 import PrivilegeCheck from "./privilege-check/PrivilegeCheck.jsx";
 
@@ -35,6 +37,7 @@ export default function App() {
   const [theme, setTheme] = useState(() => (["light", "dark"].includes(read("hostile-a2a.theme", "")) ? read("hostile-a2a.theme", "") : "system"));
   const [fontStep, setFontStep] = useState(() => { const f = read("hostile-a2a.font", "M"); return ["S", "M", "L"].includes(f) ? f : "M"; });
   const [present, setPresent] = useState(() => read("hostile-a2a.present", "0") === "1");
+  const [talkOpen, setTalkOpen] = useState(false);
   const [info, setInfo] = useState(null);
 
   useEffect(() => {
@@ -76,6 +79,7 @@ export default function App() {
             theme={{ value: theme, onChange: setThemeValue }}
             fontSize={{ value: fontStep, onChange: setFontStep }}
             present={{ active: present, onToggle: togglePresent }}
+            talkTrack={{ active: talkOpen, onToggle: () => setTalkOpen((v) => !v) }}
             help={{ href: "https://github.com/curtismu7/hostile-a2a-LAB#readme" }}
             version={LAB_VERSION}
             onReset={reset}
@@ -96,6 +100,8 @@ export default function App() {
         {notice && <p className="muted small" role="status" data-testid="notice">{notice}</p>}
         <p className="muted small" data-admin-only>The server serves cards and never scores or blocks. Pinning notices change; it does not judge content. Card signatures are not verified here.</p>
       </main>
+      <TalkTrackDialog isOpen={talkOpen} onClose={() => setTalkOpen(false)} talk={pageTalkSteps()} />
+
     </>
   );
 }
