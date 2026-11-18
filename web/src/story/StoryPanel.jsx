@@ -1,6 +1,6 @@
 // Copied from hostile-mcp (web/src/story/StoryPanel.jsx). Not imported across repos.
 import React, { useMemo, useState } from "react";
-import { VERTICALS, storyForMode, verticalById } from "./stories.js";
+import { STORIES, VERTICALS, storyForMode, verticalById } from "./stories.js";
 import { fillAll } from "./fill.js";
 
 // Adapted from the ID-JAG kit StoryPanel: the talk track for the page, re-skinned by the chosen vertical, with the
@@ -81,4 +81,18 @@ export default function StoryPanel({ mode, present = false }) {
       )}
     </section>
   );
+}
+
+
+/** The page's stories flattened into TalkTrackDialog steps (owner 2026-11-17: one pop-out talk track per page). */
+export function pageTalkSteps() {
+  const vertical = verticalById((() => { try { return localStorage.getItem(KEYS.vertical); } catch { return null; } })() || "generic");
+  return STORIES.flatMap((raw) => {
+    const story = fillAll(raw, vertical);
+    return [
+      { id: `${story.id}-goal`, title: `${story.id}: ${story.title}`, say: `${story.goal} Obstacle: ${story.obstacle} Control: ${story.control}` },
+      ...story.steps.map((s) => ({ id: `${story.id}-${s.n}`, title: `${story.id}.${s.n} ${s.title}`, say: `${s.say} ${s.why}` })),
+      { id: `${story.id}-proof`, title: `${story.id} proof`, say: story.proof ? `${story.proof.happy || ""} Takeaway: "${story.say}"` : story.say },
+    ];
+  });
 }
