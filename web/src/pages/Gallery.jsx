@@ -55,12 +55,12 @@ export default function Gallery({ present }) {
       <StoryPanel mode="gallery" present={present} />
       {error && <p role="alert" className="alert">Could not load the catalog: {error}</p>}
       {!catalog && !error && <p className="muted">Loading the catalog...</p>}
-      {catalog && CATEGORIES.map(([id, title]) => {
+      {catalog && CATEGORIES.map(([id, title], idx) => {
         const items = catalog.items.filter((i) => i.category === id);
         if (!items.length) return null;
         return (
           <section key={id} className="card" aria-labelledby={`cat-${id}`}>
-            <h3 id={`cat-${id}`}>{title}</h3>
+            <h3 id={`cat-${id}`}><span className="step-num" aria-hidden="true">{idx + 1}</span>{title}</h3>
             <div className="grid">{items.map((i) => <PoisonCard key={i.id} item={i} />)}</div>
           </section>
         );
