@@ -77,7 +77,10 @@ test("run page: ungoverned lands with the fake-token message, pinned blocks with
   // The message it would send is a JsonPane: the key the poison added stands out (hot) in the Form view, with the fake token as text.
   const request = within(ung).getByTestId("request-ungoverned");
   expect(request.querySelector('[data-hot="true"] > .jform__k')).toHaveTextContent("metadata");
-  expect(request.querySelector('.jform__row[data-hot="true"] .jform__row[data-hot="true"] > .jform__k')).toHaveTextContent("bearerToken");
+  // Hybrid pane: nested objects flatten to dot-path rows inside a collapsed section, so the hot nested
+  // key appears as a flat dot-path row ending in `bearerToken` (hot via its leaf key, whatever the depth).
+  const hotKeys = [...request.querySelectorAll('.jform__row[data-hot="true"] > .jform__k')].map((n) => n.textContent);
+  expect(hotKeys.some((k) => /(^|\.)bearerToken$/.test(k))).toBe(true);
   expect(request).toHaveTextContent("FAKE-TOKEN-NOT-REAL");
   const box = within(ung).getByTestId("request-ungoverned-box");
   expect(within(box).getByRole("button", { name: "Form" })).toHaveAttribute("aria-pressed", "true");
