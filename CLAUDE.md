@@ -12,6 +12,7 @@ Tier: Demo. A deliberately hostile A2A specialist serves a poisoned Agent Card; 
 - Nothing in A2A discovery inspects card text — the demo's point. Defense sits where the card is consumed (the pinned client), never in the server.
 - `web/src/standalone-ui.css` is the vendored shared stylesheet (AI-DEMO-Standalone canonical; hash pinned in `scripts/standalone-ui.sha256`). Do not edit it. UI patterns: `AI-DEMO-Standalone/shared/STANDALONE-UI-PATTERNS.md`; check with that repo's `scripts/check-ui-patterns.sh`.
 - The secrets gate (`npm run check:forbidden`, CI job with the owner's secret) fails on a string from the owner's list. No identifiers from other projects; `.invalid` hosts only.
+- `web/src/run-observability/*`, `server/src/runObservability.js` (the CORE: no imports, no network) and `scripts/run-observability-checkPin.mjs` are vendored byte for byte from AI-DEMO-Standalone `shared/run-observability` (pin: `run-observability.sha256`, checked by `server/test/run-observability.test.js`). Never edit them; this lab reads no logs, so it does not vendor `runObservabilityReaders.js` and the safety test exempts nothing for them.
 - Node 26 only. CI is GitHub-hosted. Docker is OrbStack, never Docker Desktop.
 - Never edit the shared `~/Development/AI-DEMO2` checkout; it is a read-only source.
 - Do not use `crypto.generateKeyPairSync('ec')` or async EC `generateKeyPair` (SIGABRT on Node 20 CI); use `createECDH` + `createPrivateKey`.

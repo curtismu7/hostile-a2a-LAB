@@ -146,9 +146,11 @@ See [LICENSE](LICENSE).
 
 ## What a run leaves behind (observability, rule 27)
 
-Under the Run result the page shows **What each layer logged for this run**: the shared run-observability panel (vendored byte for byte from
-AI-DEMO-Standalone `shared/run-observability`, pinned by `web/src/run-observability/run-observability.sha256`, checked by `server/test/run-observability.test.js`).
-It is an excerpt: ids, tokens and addresses are masked.
+Under the Run result the page shows **What each layer logged for this run**: the shared run-observability panel, vendored byte for byte from AI-DEMO-Standalone
+`shared/run-observability`: the panel files in `web/src/run-observability/`, the collector CORE in `server/src/runObservability.js` (no imports, no network, no file
+access) and the pin check `scripts/run-observability-checkPin.mjs`, all pinned by `web/src/run-observability/run-observability.sha256` and checked by
+`server/test/run-observability.test.js`. This lab reads no logs, so it does not vendor the readers file (`runObservabilityReaders.js`). It is an excerpt: ids, tokens
+and addresses are masked. Every record names all six layers; the ones this lab did not ask for read "not logged".
 
 - **Mock only.** Every row is tagged `simulated`: the lab's mock computed it. The page sends one run id with both `run-victim` calls; the server writes one stdout
   line per event and keeps the same events, each with the time on its stdout line, per workspace (the last 20 runs). `POST /api/run-observability {runId}` builds the

@@ -1,31 +1,21 @@
 // Rule 27: the run-observability record and the lab's own decision log lines.
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import http from 'node:http';
-import { createHash } from 'node:crypto';
 import test from 'node:test';
 import { startHttpServer } from '../src/app.js';
 import { createHealth } from '../src/health.js';
 import { allPassed, runChecks } from '../src/doctor.js';
 import { createSessions } from '../src/session.js';
-import { assertRunObservability, createRunObservability, defaultLayers, readersFromEnv } from '../src/runObservability.js';
+import { assertRunObservability, createRunObservability, defaultLayers, LAYERS } from '../src/runObservability.js';
+import { checkPin } from '../../scripts/run-observability-checkPin.mjs';
 import { eventsOf, logEvents } from '../src/decisionLog.js';
 import { createRunStore } from '../src/runRecord.js';
 import { runScenario } from '../src/scenario.js';
 import { VARIANT_IDS } from '../src/card.js';
 
-const root = (p) => new URL(`../../${p}`, import.meta.url);
-
 // ---- the pin: an edited vendored copy fails here ---------------------------------------------------------------
+// The one shared check (vendored byte for byte as scripts/run-observability-checkPin.mjs). This lab reads no logs, so it has no readers file.
 test('the vendored run-observability files match run-observability.sha256 (an edited copy fails)', () => {
-  const pin = fs.readFileSync(root('web/src/run-observability/run-observability.sha256'), 'utf8').split('\n').filter((l) => l && !l.startsWith('#'));
-  const names = pin.map((l) => l.trim().split(/\s+/)[1]);
-  assert.deepEqual([...names].sort(), ['RunObservability.jsx', 'fixtures.js', 'run-observability.css', 'run-observability.test.jsx', 'runObservability.js']);
-  for (const line of pin) {
-    const [hash, name] = line.trim().split(/\s+/);
-    const where = name === 'runObservability.js' ? 'server/src/runObservability.js' : `web/src/run-observability/${name}`; // the pin lists the server file by its plain name
-    assert.equal(createHash('sha256').update(fs.readFileSync(root(where))).digest('hex'), hash, `${where} was edited: change it in AI-DEMO-Standalone shared/run-observability and re-vendor`);
-  }
+  assert.deepEqual(checkPin(new URL('../../', import.meta.url).pathname), []);
 });
 
 // ---- helpers ----------------------------------------------------------------------------------------------------
@@ -223,43 +213,27 @@ test('with no Real settings: Mock to Real is refused (409) and back to Mock work
   assert.deepEqual(await info(), before);
 })));
 
-// ---- a Real record against an in-process fake Elasticsearch -------------------------------------------------------
-// The lab offers no Real record (it has no live version). This proves the vendored collector, in the lab's Node, builds a record that passes the
-// same contract when it reads Elasticsearch: logged rows carry their own timestamp, a layer with no line is not-logged, a refused key is unreachable.
-async function fakeEs(handler) {
-  const server = http.createServer((req, res) => {
-    let raw = ''; req.on('data', (c) => { raw += c; });
-    req.on('end', () => { const [status, out] = handler(JSON.parse(raw || '{}')); res.writeHead(status, { 'content-type': 'application/json' }); res.end(JSON.stringify(out)); });
-  });
-  await new Promise((r) => server.listen(0, '127.0.0.1', r));
-  return { url: `http://127.0.0.1:${server.address().port}`, close: () => server.close() };
-}
+// ---- a real-source record from an inline fake reader --------------------------------------------------------------
+// The lab offers no Real record and reads no logs. This proves the vendored core, in the lab's Node, builds a real-source record that passes the same
+// contract: a logged row carries its own timestamp, a layer with no line is not-logged, a failing reader makes the layers it covers unreachable.
 const P1AZ = '[vert.x-eventloop-thread-1] INFO  o.f.o.f.S.P1AZDecision @00-mcp-olb-jwks - [P1AZ] DECISION: PERMIT | backend=real | sub=user-7 | tool=whoami | method=tools/call | vertical=university | obligation=none';
 const T0 = Date.parse('2026-11-22T10:00:00Z');
+const fakeReader = (lines) => ({ name: 'fake', canRead: () => true, readLines: async ({ product }) => ({ lines: product === 'pinggateway' ? lines.map((l) => ({ ...l, product })) : [] }) });
 
-test('a real record from a fake Elasticsearch passes assertRunObservability; a refused key is unreachable with a reason', async () => {
-  const es = await fakeEs((q) => {
-    const product = q.query.bool.filter[1]?.bool.should[0].term.ping_product;
-    return [200, { hits: { hits: product === 'pinggateway' ? [{ _source: { '@timestamp': '2026-11-22T10:00:02.300Z', ping_product: 'pinggateway', message: P1AZ } }] : [] } }];
-  });
-  try {
-    const readers = readersFromEnv({ RUN_OBS_ES_URL: es.url, RUN_OBS_ES_READ_APIKEY: 'read-only-test-value' });
-    const rec = await createRunObservability({ readers, clock: () => T0 + 9000 }).collectRun({ runId: 'real-1', startedAt: T0, endedAt: T0 + 9000, correlation: { sub: 'user-7' }, layers: defaultLayers(), source: 'real' });
-    assert.deepEqual(assertRunObservability(rec), []);
-    assert.equal(rec.source, 'real');
-    assert.equal(rec.coverage.authorize, 'logged');
-    assert.equal(rec.coverage.person, 'not-logged');
-    assert.ok(rec.rows.filter((r) => r.origin === 'logged').every((r) => r.at && r.basis));
-    assert.ok(rec.rows.every((r) => r.origin !== 'simulated'));
-  } finally { es.close(); }
-  const denied = await fakeEs(() => [401, { error: 'no' }]);
-  try {
-    const readers = readersFromEnv({ RUN_OBS_ES_URL: denied.url, RUN_OBS_ES_READ_APIKEY: 'read-only-test-value' });
-    const rec = await createRunObservability({ readers }).collectRun({ runId: 'real-2', startedAt: T0, endedAt: T0 + 9000, layers: defaultLayers(), source: 'real' });
-    assert.deepEqual(assertRunObservability(rec), []);
-    assert.ok(Object.values(rec.coverage).every((c) => c === 'unreachable'));
-    assert.ok(!JSON.stringify(rec).includes('read-only-test-value'));
-  } finally { denied.close(); }
+test('a real record from an inline fake reader passes assertRunObservability and names all six layers; a failing reader makes layers unreachable with a reason', async () => {
+  const rec = await createRunObservability({ readers: [fakeReader([{ at: T0 + 2300, atExact: '2026-11-22T10:00:02.300Z', message: P1AZ }])] })
+    .collectRun({ runId: 'real-1', startedAt: T0, endedAt: T0 + 9000, correlation: { sub: 'user-7' }, layers: defaultLayers(), source: 'real' });
+  assert.deepEqual(assertRunObservability(rec), []);
+  assert.equal(rec.source, 'real');
+  assert.deepEqual(Object.keys(rec.coverage).sort(), [...LAYERS].sort());
+  assert.equal(rec.coverage.authorize, 'logged');
+  assert.equal(rec.coverage.person, 'not-logged');
+  assert.ok(rec.rows.filter((r) => r.origin === 'logged').every((r) => r.at && r.basis));
+  assert.ok(rec.rows.every((r) => r.origin !== 'simulated'));
+  const failing = { name: 'fake', canRead: () => true, readLines: async () => { throw new Error('boom'); } };
+  const down = await createRunObservability({ readers: [failing] }).collectRun({ runId: 'real-2', startedAt: T0, endedAt: T0 + 9000, layers: defaultLayers(), source: 'real' });
+  assert.deepEqual(assertRunObservability(down), []);
+  assert.ok(Object.values(down.coverage).every((c) => c === 'unreachable' || c === 'not-logged'));
 });
 
 // ---- the lab's own log lines ------------------------------------------------------------------------------------

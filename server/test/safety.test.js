@@ -8,7 +8,6 @@ import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { startHttpServer } from '../src/app.js';
 import { VARIANT_IDS } from '../src/card.js';
@@ -123,40 +122,20 @@ test('the guard itself works: it trips on a fetch, a socket and a DNS lookup to 
   assert.deepEqual(guard.attempts, ['fetch:attacker.example', 'socket:203.0.113.9', 'dns:attacker.example']);
 });
 
-// The shared run-observability collector (rule 27) holds an Elasticsearch reader (one fetch to a loopback URL) and an opt-in Docker-socket reader. This lab never
-// builds either. The exemption below is narrow: it holds only while the file's sha256 equals the pinned value, and only for these audited lines.
-const SHARED = path.join(SRC, 'runObservability.js');
-const AUDITED = [
-  "import http from 'node:http';", // the Docker reader's request
-  'const req = http.request({ socketPath: this.socketPath', // the opt-in Docker reader: GET on the Docker socket only
-  'res = await fetch(`${u.origin}/${index}/_search`', // the Elasticsearch reader: one read-only POST to a loopback URL
-  '// MEASURED 2026-11-08 (observability-LAB access-audit)', // a comment that names the http.request.path field
-];
-const BANNED = /(?<![.\w])fetch\s*\(|node:https?['"]|node:net['"]|node:tls['"]|node:dns['"]|node:child_process['"]|undici|XMLHttpRequest|WebSocket|http\.request|https\.request|ClientTransport/;
-const pinnedHash = () => fs.readFileSync(path.resolve(SRC, '../../web/src/run-observability/run-observability.sha256'), 'utf8').split('\n').find((l) => /\srunObservability\.js$/.test(l)).split(/\s+/)[0];
-const sharedIsAudited = () => {
-  const text = fs.readFileSync(SHARED, 'utf8');
-  if (createHash('sha256').update(text).digest('hex') !== pinnedHash()) return false; // an edited copy loses the exemption
-  const hits = text.split('\n').filter((l) => BANNED.test(l)).map((l) => l.trim());
-  return hits.length === AUDITED.length && AUDITED.every((a) => hits.some((h) => h.startsWith(a))); // a new outbound line loses it too
-};
+// The vendored run-observability core (rule 27) has no imports, no network and no file access, so it is scanned like every other server file: no exemption.
+const BANNED = /(?<![.\w])fetch\s*\(|node:https?['"]|node:net['"]|node:tls['"]|node:dns['"]|node:child_process['"]|undici|XMLHttpRequest|WebSocket|(?<![.\w?])https?\.request\s*\(|ClientTransport/;
+const codeOnly = (text) => text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '').replace(/\s\/\/ .*$/gm, ''); // comments may name things; code may not
 
-test('the exemption for the shared run-observability collector holds only for the pinned file and the audited lines', () => {
-  assert.equal(sharedIsAudited(), true);
-});
-
-test('no other server file builds or names a log reader or the Docker socket', () => {
-  const others = walk(SRC).filter((f) => f.endsWith('.js') && f !== SHARED);
-  for (const f of others) assert.doesNotMatch(fs.readFileSync(f, 'utf8'), /readersFromEnv|DockerLogReader|ElasticsearchReader|socketPath/, path.relative(SRC, f));
+test('no server file (the vendored core included) builds or names a log reader or the Docker socket in code', () => {
+  for (const f of walk(SRC).filter((x) => x.endsWith('.js'))) assert.doesNotMatch(codeOnly(fs.readFileSync(f, 'utf8')), /readersFromEnv|DockerLogReader|ElasticsearchReader|socketPath/, path.relative(SRC, f));
+  assert.ok(!fs.existsSync(path.join(SRC, 'runObservabilityReaders.js')), 'this lab reads no logs, so it does not vendor the readers file');
 });
 
 test('server source has no outbound code path, and the demo logic never touches files, processes or the environment', () => {
-  const offenders = walk(SRC).filter((f) => f.endsWith('.js') && BANNED.test(fs.readFileSync(f, 'utf8')));
-  // gatewayReal.js is the family's shared, audited real-hop client (mcp-tools-LAB's measured wire): the one outbound path.
-  // runObservability.js is exempt only while sharedIsAudited() holds (pinned hash, audited lines); this lab builds no reader, and the no-outbound test above
-  // drives /api/run-observability under the network guard.
-  const exempt = ['gatewayReal.js', ...(sharedIsAudited() ? ['runObservability.js'] : [])];
-  assert.deepEqual(offenders.map((f) => path.relative(SRC, f)).filter((f) => !exempt.includes(f)), []);
+  const offenders = walk(SRC).filter((f) => f.endsWith('.js') && BANNED.test(codeOnly(fs.readFileSync(f, 'utf8'))));
+  // gatewayReal.js is the family's shared, audited real-hop client (mcp-tools-LAB's measured wire): the one outbound path. Nothing else is exempt,
+  // and the no-outbound test above drives /api/run-observability under the network guard.
+  assert.deepEqual(offenders.map((f) => path.relative(SRC, f)).filter((f) => f !== 'gatewayReal.js'), []);
   for (const f of ['hostile.js', 'victim.js', 'scenario.js', 'pinning.js', 'scanner.js', 'session.js', 'card.js']) {
     assert.doesNotMatch(fs.readFileSync(path.join(SRC, f), 'utf8'), /node:fs|child_process|writeFile|appendFile|process\.env|\bimport\s*\(/, f);
   }
