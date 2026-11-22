@@ -144,6 +144,42 @@ See [LICENSE](LICENSE).
 
 ---
 
+## What a run leaves behind (observability, rule 27)
+
+Under the Run result the page shows **What each layer logged for this run**: the shared run-observability panel, vendored byte for byte from AI-DEMO-Standalone
+`shared/run-observability`: the panel files in `web/src/run-observability/`, the collector CORE in `server/src/runObservability.js` (no imports, no network, no file
+access) and the pin check `scripts/run-observability-checkPin.mjs`, all pinned by `web/src/run-observability/run-observability.sha256` and checked by
+`server/test/run-observability.test.js`. This lab reads no logs, so it does not vendor the readers file (`runObservabilityReaders.js`). It is an excerpt: ids, tokens
+and addresses are masked. Every record names all six layers; the ones this lab did not ask for read "not logged".
+
+- **Mock only.** Every row is tagged `simulated`: the lab's mock computed it. The page sends one run id with both `run-victim` calls; the server writes one stdout
+  line per event and keeps the same events, each with the time on its stdout line, per workspace (the last 20 runs). `POST /api/run-observability {runId}` builds the
+  record from those stored events: nothing is re-run and no time is adjusted. **Time = when the lab computed it** (the time on its stdout line); events of one
+  `run-victim` call share one time. None of it is read from a product log.
+- **Only the pinned client decides.** Its verdict is `allowed` (passed) or `refused` (withheld). Every other row (the specialist serving the card, the pinned
+  client's trust-on-first-use approval, what the generalist built, even a poisoned message) is `info`: for information, never a pass.
+- **Real record: reserved, not offered.** The Run scenario is offline in both modes (the Privilege gateway check, `POST /api/gateway-check`, is a separate Real
+  call and is not part of the run result), and the shared panel has no reader or matcher for this lab's decision lines. So the server answers 409 to a Real record
+  request and the page says so. When the panel gains a reader or matcher for this lab (a change to the shared panel first), a Real record can read the lines
+  below from Elasticsearch. Nothing is faked and no Elasticsearch setting is read today.
+- **The lab's own server logs what it did for a run**, one timestamped line to container stdout, no tokens, no card text, no task:
+  `2026-11-22T10:00:00.000Z hostile-a2a event actor=pinned-client outcome=withheld client=pinned variant=rug-pull stage=later findings=changed,scanner-finding`
+  (actors `hostile-specialist`, `pinned-client`, `generalist-ungoverned`, `generalist-behind-pin`; written by `run-victim` and the round trip's compare step).
+
+| Layer | In this lab |
+|---|---|
+| Person | `not-logged`: no sign-in in this lab |
+| Agent | the generalist's step (only when the card reached it), `simulated`, for information |
+| Authorize | `not-logged`: no PingOne Authorize in this lab |
+| Privilege | `not-logged`: no Privilege in the Mock run |
+| Agent gateway | the pinned client's approval (info) and verdict (allowed or refused), `simulated`. The lane title is the panel's; the pinned client is the lab's own gate, not a gateway product (the page says so under the panel) |
+| Resource server | the hostile specialist serving its Agent Card, `simulated`, for information |
+
+**Where the logs live and where they can stream.** The lab's event lines live in the container's stdout. A collector (`shared/ping-log-collector`) can ship them to
+Elasticsearch (`demo-logs-hostile-a2a`) and on to a SIEM. Not in any log today: PingOne Authorize decisions (the PingOne audit API, not read by the panel),
+PingFederate `audit.log` (not shipped), and gateway refusal and block lines (unconfirmed shapes). No Elasticsearch settings are in this lab's `.env` or compose file,
+and the Docker socket is never mounted.
+
 ## Real mode: through the PingOne Privilege gateway
 
 Real mode here is one live call through the SE PingOne Privilege gateway (its URL is the

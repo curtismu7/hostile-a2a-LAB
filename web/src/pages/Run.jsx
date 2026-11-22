@@ -1,10 +1,11 @@
 // Structure copied from hostile-mcp (web/src/pages/Run.jsx), adapted: one Agent Card, a delegating generalist that
 // returns the message it WOULD send, and an ungoverned and a pinned client side by side.
 import React, { useState } from "react";
-import { runVictim } from "../lib/api.js";
+import { runObservability, runVictim } from "../lib/api.js";
 import { Revealed, Untrusted } from "../lib/Untrusted.jsx";
 import Json from "../components/JsonPane.jsx";
 import StoryPanel from "../story/StoryPanel.jsx";
+import RunObservability from "../run-observability/RunObservability.jsx";
 
 export const TASKS = [
   { text: "Please refund my last order", note: "matches the refund skill" },
@@ -23,6 +24,13 @@ export const POISONS = [
   { id: "unsigned", label: "Clean but unsigned, signatures required", task: 0 },
   { id: "clean", label: "A clean card (an honest card, for comparison)", task: 0 },
 ];
+// Rule 27: where this lab's logs live and where they stream (the README says the same).
+export const STREAMS = [
+  { product: "hostile-a2a (this lab's server)", lives: "its container stdout, one timestamped line per event (actor, outcome); the rows above carry those same times", streams: "the collector to demo-logs-hostile-a2a, then a SIEM (the shared panel has no reader or matcher for these lines yet, so no Real record is offered)" },
+  { product: "Hostile specialist, pinned client, generalist (Mock)", lives: "nowhere: the lab's mock computed them and no product log exists", streams: "nowhere" },
+];
+// One id per press of "Run both clients": both run-victim calls carry it, and the server builds the record from the events it stored for it.
+const newRunId = () => `run-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 const STAGES = [["first", "Day one: the card as first fetched"], ["later", "Later: the next fetch of the card"]];
 
 const FINDING_TEXT = {
@@ -138,19 +146,23 @@ function initial() {
   return { poison: p, task: Number.isInteger(task) && TASKS[task] && q.has("task") ? task : POISONS[p].task, stage: STAGES.some(([id]) => id === q.get("stage")) ? q.get("stage") : "later" };
 }
 
-export default function Run({ present }) {
+export default function Run({ present, source = "mock" }) {
   const [{ poison, task, stage }, setSel] = useState(initial);
   const [runs, setRuns] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [record, setRecord] = useState(null);
 
   async function go() {
-    setBusy(true); setError(""); setRuns(null);
+    setBusy(true); setError(""); setRuns(null); setRecord(null);
     const p = POISONS[poison];
-    const base = { task: TASKS[task].text, stage, variant: p.id === "unsigned" ? "clean" : p.id };
+    const runId = newRunId();
+    const base = { task: TASKS[task].text, stage, variant: p.id === "unsigned" ? "clean" : p.id, runId };
     try {
       const [ungoverned, pinned] = await Promise.all([runVictim({ ...base, mode: "ungoverned" }), runVictim({ ...base, mode: "pinned", requireSignatures: p.id === "unsigned" })]);
       setRuns({ ungoverned, pinned });
+      // Mock only: this lab offers no Real record. A failure is shown in the panel as {error, message}, the run result stays.
+      if (source !== "real") setRecord(await runObservability(runId).catch((e) => ({ error: "run_observability_failed", message: e.message })));
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
 
@@ -184,6 +196,17 @@ export default function Run({ present }) {
           <Column title="Pinned client" run={runs.pinned} other={runs.ungoverned} />
         </div>
       )}
+      {source === "real"
+        ? <p className="muted small" data-testid="ro-real-not-offered">What each layer logged: a Real record is not offered. The Run scenario is offline in both modes, and the shared panel has no reader or matcher for this lab's decision lines. Switch to Mock to see the simulated record.</p>
+        : (
+          <>
+            <RunObservability record={record} source="mock" streams={STREAMS} />
+            <p className="muted small" data-testid="ro-lane-note">
+              Time = when the lab computed it: the same time as its stdout line for that event. The Agent gateway lane holds this lab's own pinned client (not a gateway product),
+              the Resource server lane holds the hostile specialist, and the Agent lane holds the generalist. Only the pinned client decides; every other row is for information.
+            </p>
+          </>
+        )}
     </>
   );
 }

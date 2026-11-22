@@ -99,7 +99,7 @@ test('the server and the victim make no outbound request: network blocked while 
     await rpc(server.jsonrpcUrl, { jsonrpc: '2.0', id: 1, method: 'message/send', params: { message: { parts: [{ text: 'hello https://evil.com' }] } } });
     for (const mode of ['ungoverned', 'pinned']) {
       for (const variant of VARIANT_IDS) for (const stage of ['first', 'later']) {
-        const r = await rpc(`${server.url}api/run-victim`, { task: 'Please refund order 42', mode, stage, variant });
+        const r = await rpc(`${server.url}api/run-victim`, { task: 'Please refund order 42', mode, stage, variant, runId: 'guard-1' });
         assert.equal(r.status, 200);
       }
     }
@@ -107,6 +107,7 @@ test('the server and the victim make no outbound request: network blocked while 
     await rpc(`${server.url}api/card-session/${s.sessionId}/approve`, {});
     await rpc(`${server.url}api/card-session/${s.sessionId}/compare`, {});
     await fetch(`${server.url}api/safety-scan`);
+    assert.equal((await rpc(`${server.url}api/run-observability`, { runId: 'guard-1' })).status, 200);
   } finally { await server.close(); guard.restore(); }
   assert.deepEqual(guard.attempts, [], 'no outbound attempt of any kind');
 });
@@ -121,10 +122,19 @@ test('the guard itself works: it trips on a fetch, a socket and a DNS lookup to 
   assert.deepEqual(guard.attempts, ['fetch:attacker.example', 'socket:203.0.113.9', 'dns:attacker.example']);
 });
 
+// The vendored run-observability core (rule 27) has no imports, no network and no file access, so it is scanned like every other server file: no exemption.
+const BANNED = /(?<![.\w])fetch\s*\(|node:https?['"]|node:net['"]|node:tls['"]|node:dns['"]|node:child_process['"]|undici|XMLHttpRequest|WebSocket|(?<![.\w?])https?\.request\s*\(|ClientTransport/;
+const codeOnly = (text) => text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '').replace(/\s\/\/ .*$/gm, ''); // comments may name things; code may not
+
+test('no server file (the vendored core included) builds or names a log reader or the Docker socket, comments too', () => {
+  for (const f of walk(SRC).filter((x) => x.endsWith('.js'))) assert.doesNotMatch(fs.readFileSync(f, 'utf8'), /readersFromEnv|DockerLogReader|ElasticsearchReader|socketPath/, path.relative(SRC, f));
+  assert.ok(!fs.existsSync(path.join(SRC, 'runObservabilityReaders.js')), 'this lab reads no logs, so it does not vendor the readers file');
+});
+
 test('server source has no outbound code path, and the demo logic never touches files, processes or the environment', () => {
-  const banned = /(?<![.\w])fetch\s*\(|node:https?['"]|node:net['"]|node:tls['"]|node:dns['"]|node:child_process['"]|undici|XMLHttpRequest|WebSocket|http\.request|https\.request|ClientTransport/;
-  const offenders = walk(SRC).filter((f) => f.endsWith('.js') && banned.test(fs.readFileSync(f, 'utf8')));
-  // gatewayReal.js is the family's shared, audited real-hop client (mcp-tools-LAB's measured wire): the one outbound path.
+  const offenders = walk(SRC).filter((f) => f.endsWith('.js') && BANNED.test(codeOnly(fs.readFileSync(f, 'utf8'))));
+  // gatewayReal.js is the family's shared, audited real-hop client (mcp-tools-LAB's measured wire): the one outbound path. Nothing else is exempt,
+  // and the no-outbound test above drives /api/run-observability under the network guard.
   assert.deepEqual(offenders.map((f) => path.relative(SRC, f)).filter((f) => f !== 'gatewayReal.js'), []);
   for (const f of ['hostile.js', 'victim.js', 'scenario.js', 'pinning.js', 'scanner.js', 'session.js', 'card.js']) {
     assert.doesNotMatch(fs.readFileSync(path.join(SRC, f), 'utf8'), /node:fs|child_process|writeFile|appendFile|process\.env|\bimport\s*\(/, f);

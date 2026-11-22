@@ -2,6 +2,8 @@
 
 ## 0.1.0 (in progress)
 
+- Run observability (rule 27): the shared `RunObservability` panel (vendored byte for byte from AI-DEMO-Standalone `shared/run-observability`: panel, collector core and pin check; no readers file because this lab reads no logs) under the Run result, fed by `POST /api/run-observability`. Mock only: every row is `simulated` and is an event the server wrote to stdout for that run (one `hostile-a2a event` line each, actor and outcome, no tokens), with that line's own time (time = when the lab computed it); only the pinned client's verdict is a decision, every other row is `info`. No Real record is offered: the Run scenario is offline in both modes and the shared panel has no reader or matcher for this lab's lines.
+
 - Verification mark in the header: the shared `VerifyMark` (vendored from AI-DEMO-Standalone `shared/verify-mark`, byte for byte, pinned) shows this lab's Verified / In progress mark from the demo shelf, inside the top menu beside the Shelf link. It reads the same `GET /api/shelf` call the Shelf link makes, so it shows through the lab-proxy and nothing when the lab is opened on its own port, when the shelf has no mark for it, or when the shelf is unreachable.
 
 - Moved the default port from 4901 to 4750 (Vite dev server 4902 to 4751): 4901 belongs to mcp-auth-conformance-LAB (range 4900-4949), so the shelf showed a port clash.
