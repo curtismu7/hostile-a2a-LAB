@@ -1,10 +1,11 @@
 // Structure copied from hostile-mcp (web/src/pages/Run.jsx), adapted: one Agent Card, a delegating generalist that
 // returns the message it WOULD send, and an ungoverned and a pinned client side by side.
 import React, { useState } from "react";
-import { runVictim } from "../lib/api.js";
+import { runObservability, runVictim } from "../lib/api.js";
 import { Revealed, Untrusted } from "../lib/Untrusted.jsx";
 import Json from "../components/JsonPane.jsx";
 import StoryPanel from "../story/StoryPanel.jsx";
+import RunObservability from "../run-observability/RunObservability.jsx";
 
 export const TASKS = [
   { text: "Please refund my last order", note: "matches the refund skill" },
@@ -22,6 +23,11 @@ export const POISONS = [
   { id: "origin-mismatch", label: "The url moves to another origin later", task: 0 },
   { id: "unsigned", label: "Clean but unsigned, signatures required", task: 0 },
   { id: "clean", label: "A clean card (an honest card, for comparison)", task: 0 },
+];
+// Rule 27: where this lab's logs live and where they stream (the README says the same).
+export const STREAMS = [
+  { product: "hostile-a2a (this lab's server)", lives: "its container stdout, one timestamped line per decision (actor, outcome)", streams: "the collector to demo-logs-hostile-a2a, then a SIEM (the shared panel has no matcher for these lines yet, so a Real record would show them as not logged)" },
+  { product: "Hostile specialist, pinned client, generalist (Mock)", lives: "nowhere: the lab's mock computed them and no product log exists", streams: "nowhere" },
 ];
 const STAGES = [["first", "Day one: the card as first fetched"], ["later", "Later: the next fetch of the card"]];
 
@@ -138,19 +144,22 @@ function initial() {
   return { poison: p, task: Number.isInteger(task) && TASKS[task] && q.has("task") ? task : POISONS[p].task, stage: STAGES.some(([id]) => id === q.get("stage")) ? q.get("stage") : "later" };
 }
 
-export default function Run({ present }) {
+export default function Run({ present, source = "mock" }) {
   const [{ poison, task, stage }, setSel] = useState(initial);
   const [runs, setRuns] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [record, setRecord] = useState(null);
 
   async function go() {
-    setBusy(true); setError(""); setRuns(null);
+    setBusy(true); setError(""); setRuns(null); setRecord(null);
     const p = POISONS[poison];
     const base = { task: TASKS[task].text, stage, variant: p.id === "unsigned" ? "clean" : p.id };
     try {
       const [ungoverned, pinned] = await Promise.all([runVictim({ ...base, mode: "ungoverned" }), runVictim({ ...base, mode: "pinned", requireSignatures: p.id === "unsigned" })]);
       setRuns({ ungoverned, pinned });
+      // Mock only: this lab offers no Real record. A failure is shown in the panel as {error, message}, the run result stays.
+      if (source !== "real") setRecord(await runObservability({ ...base, requireSignatures: p.id === "unsigned" }).catch((e) => ({ error: "run_observability_failed", message: e.message })));
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
 
@@ -184,6 +193,9 @@ export default function Run({ present }) {
           <Column title="Pinned client" run={runs.pinned} other={runs.ungoverned} />
         </div>
       )}
+      {source === "real"
+        ? <p className="muted small" data-testid="ro-real-not-offered">What each layer logged: a Real record is not offered. This app has no live version, so there is no Real run to read logs for. Switch to Mock to see the simulated record.</p>
+        : <RunObservability record={record} source="mock" streams={STREAMS} />}
     </>
   );
 }

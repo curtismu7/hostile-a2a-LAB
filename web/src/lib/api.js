@@ -14,6 +14,7 @@ export const getCatalog = () => request("/api/catalog");
 export const getInfo = () => request("/api/info");
 export const setMode = (source) => post("/api/mode", { source });
 export const runVictim = ({ task, mode, stage, variant, requireSignatures }) => post("/api/run-victim", { task, mode, stage, variant, ...(requireSignatures ? { requireSignatures: true } : {}) });
+export const runObservability = ({ task, stage, variant, requireSignatures }) => post("/api/run-observability", { task, stage, variant, ...(requireSignatures ? { requireSignatures: true } : {}) });
 export const newSession = (variant, requireSignatures) => post("/api/card-session/new", { variant, ...(requireSignatures ? { requireSignatures: true } : {}) });
 export const approve = (id) => post(`/api/card-session/${id}/approve`);
 export const compare = (id) => post(`/api/card-session/${id}/compare`);

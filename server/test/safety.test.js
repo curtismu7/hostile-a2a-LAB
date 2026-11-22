@@ -107,6 +107,7 @@ test('the server and the victim make no outbound request: network blocked while 
     await rpc(`${server.url}api/card-session/${s.sessionId}/approve`, {});
     await rpc(`${server.url}api/card-session/${s.sessionId}/compare`, {});
     await fetch(`${server.url}api/safety-scan`);
+    assert.equal((await rpc(`${server.url}api/run-observability`, { task: 'Please refund order 42', stage: 'later', variant: 'rug-pull' })).status, 200);
   } finally { await server.close(); guard.restore(); }
   assert.deepEqual(guard.attempts, [], 'no outbound attempt of any kind');
 });
@@ -125,7 +126,9 @@ test('server source has no outbound code path, and the demo logic never touches 
   const banned = /(?<![.\w])fetch\s*\(|node:https?['"]|node:net['"]|node:tls['"]|node:dns['"]|node:child_process['"]|undici|XMLHttpRequest|WebSocket|http\.request|https\.request|ClientTransport/;
   const offenders = walk(SRC).filter((f) => f.endsWith('.js') && banned.test(fs.readFileSync(f, 'utf8')));
   // gatewayReal.js is the family's shared, audited real-hop client (mcp-tools-LAB's measured wire): the one outbound path.
-  assert.deepEqual(offenders.map((f) => path.relative(SRC, f)).filter((f) => f !== 'gatewayReal.js'), []);
+  // runObservability.js is the shared, pinned run-observability collector (rule 27): its Elasticsearch reader can only reach a loopback URL, and this lab
+  // never builds a reader (Mock only; the no-outbound test above drives /api/run-observability under the network guard).
+  assert.deepEqual(offenders.map((f) => path.relative(SRC, f)).filter((f) => !['gatewayReal.js', 'runObservability.js'].includes(f)), []);
   for (const f of ['hostile.js', 'victim.js', 'scenario.js', 'pinning.js', 'scanner.js', 'session.js', 'card.js']) {
     assert.doesNotMatch(fs.readFileSync(path.join(SRC, f), 'utf8'), /node:fs|child_process|writeFile|appendFile|process\.env|\bimport\s*\(/, f);
   }

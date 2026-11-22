@@ -144,6 +144,38 @@ See [LICENSE](LICENSE).
 
 ---
 
+## What a run leaves behind (observability, rule 27)
+
+Under the Run result the page shows **What each layer logged for this run**: the shared run-observability panel (vendored byte for byte from
+AI-DEMO-Standalone `shared/run-observability`, pinned by `web/src/run-observability/run-observability.sha256`, checked by `server/test/run-observability.test.js`).
+It is an excerpt: ids, tokens and addresses are masked.
+
+- **Mock only.** Every row is tagged `simulated`: the lab's mock computed it (the specialist serving the card, the pinned client's approval and verdict, the
+  generalist's decision) and stamped it with the time the server built the record. None is read from a log. `POST /api/run-observability` builds the record by
+  running the same deterministic scenario the page just showed for both clients.
+- **Real record: not offered.** This app has no live version (`GET /api/info` says `realAvailable: false`), so there is no Real run to read logs for. The page says so
+  when the toggle shows Real, and the server answers 409. Nothing is faked.
+- **The lab's own server logs each decision it makes**, one timestamped line to container stdout, no tokens, no card text, no task:
+  `2026-11-22T10:00:00.000Z hostile-a2a decision actor=pinned-client outcome=withheld variant=rug-pull stage=later findings=changed,scanner-finding`
+  (actors `pinned-client`, `generalist-ungoverned`, `generalist-behind-pin`; written by `run-victim` and the round trip's compare step).
+
+| Layer | In this lab |
+|---|---|
+| Person | `not-logged`: no sign-in in this lab |
+| Agent | the generalist's decision, `simulated` (only when the card reached it) |
+| Authorize | `not-logged`: no PingOne Authorize in this lab |
+| Privilege | `not-logged`: no Privilege in the Mock run |
+| Agent gateway | the pinned client's approval and verdict, `simulated` (the pinned client is the lab's own gate, not a gateway product) |
+| Resource server | the hostile specialist serving its Agent Card, `simulated` |
+
+**Where the logs live and where they can stream.** The lab's decision lines live in the container's stdout. A collector (`shared/ping-log-collector`) can ship them to
+Elasticsearch (`demo-logs-hostile-a2a`) and on to a SIEM. The shared panel has no matcher for these lines yet, so even with a collector a Real record would show them as
+`not-logged`; a matcher would be a change to the shared panel first. The Mock rows exist nowhere but the response. Not in any log today: PingOne Authorize decisions (the
+PingOne audit API, not read by the panel), PingFederate `audit.log` (not shipped), and gateway refusal and block lines (unconfirmed shapes).
+
+**Settings** (both empty by default, in `.env.example` and passed through `docker-compose.yml`): `RUN_OBS_ES_URL` (a loopback Elasticsearch origin only) and
+`RUN_OBS_ES_READ_APIKEY` (a read-only key). Nothing in this lab reads them today. The Docker socket is never mounted.
+
 ## Real mode: through the PingOne Privilege gateway
 
 Real mode here is one live call through the SE PingOne Privilege gateway (its URL is the

@@ -21,6 +21,9 @@ import { workspaceMiddleware } from './workspace.js';
 import { shelfInfo } from './shelfLink.js';
 import { makeHostGuard, makeOriginGuard, parseLabHosts, proxyHostSet } from './sameorigin.js';
 import { readFileSettings, doorConfig, createRealDoor } from './gatewayReal.js';
+import { decisionsOf, logDecisions, stdoutSink } from './decisionLog.js';
+import { buildRunRecord } from './runRecord.js';
+import { RunObsError } from './runObservability.js';
 
 // Real mode = the shared gateway hop: an agent key from the shared settings file calling a live Privilege door.
 // The environment wins over the file: HAA_* variables overlay the parsed file text.
@@ -57,7 +60,7 @@ function checkVariant(body) {
   return null;
 }
 
-export function createApp({ health = defaultHealth(), sessions = createSessions(), publicBaseUrl, port, customer = loadCustomer(),
+export function createApp({ health = defaultHealth(), sessions = createSessions(), publicBaseUrl, port, customer = loadCustomer(), decisionLog = stdoutSink, clock = () => Date.now(),
   labHosts = parseLabHosts(process.env.LAB_ALLOWED_HOSTS), labPort = Number(process.env.PORT) || 4750 } = {}) {
   const app = express();
   app.disable('x-powered-by');
@@ -110,15 +113,37 @@ export function createApp({ health = defaultHealth(), sessions = createSessions(
   });
   api.get('/victim-rules', (_req, res) => res.json({ rules: VICTIM_RULES, pinningCatches: CATCHES, pinningLimits: LIMITS, scannerLimits: SCAN_LIMITS, scannerRules: RULES }));
 
-  api.post('/run-victim', (req, res) => {
-    const body = req.body && typeof req.body === 'object' ? req.body : {};
+  // The fields run-victim and run-observability share (the latter runs both clients, so it needs no mode). Returns { error } or { params }.
+  const runParams = (raw, needMode) => {
+    const body = raw && typeof raw === 'object' ? raw : {};
     const { task, mode, stage = 'later' } = body;
-    if (!TASK_OK(task)) return bad(res, `task must be a non-empty string of at most ${MAX_TASK} characters`);
-    if (!MODES.includes(mode)) return bad(res, `mode must be one of ${MODES.join(', ')}`);
-    if (!STAGES.includes(stage)) return bad(res, `stage must be one of ${STAGES.join(', ')}`);
+    if (!TASK_OK(task)) return { error: `task must be a non-empty string of at most ${MAX_TASK} characters` };
+    if (needMode && !MODES.includes(mode)) return { error: `mode must be one of ${MODES.join(', ')}` };
+    if (!STAGES.includes(stage)) return { error: `stage must be one of ${STAGES.join(', ')}` };
     const err = checkVariant(body);
-    if (err) return bad(res, err);
-    return res.json(runScenario({ task: task.trim(), mode, stage, ...(body.variant ? { variant: body.variant } : {}), requireSignatures: body.requireSignatures === true }));
+    if (err) return { error: err };
+    return { params: { task: task.trim(), mode, stage, ...(body.variant ? { variant: body.variant } : {}), requireSignatures: body.requireSignatures === true } };
+  };
+
+  api.post('/run-victim', (req, res) => {
+    const { error, params } = runParams(req.body, true);
+    if (error) return bad(res, error);
+    const run = runScenario(params);
+    logDecisions(decisionLog, decisionsOf(run), { variant: run.variant, stage: run.stage });
+    return res.json(run);
+  });
+
+  // Rule 27: what each layer logged for the run the Run page just showed (both clients). Mock only: the lab's mock computed every row.
+  api.post('/run-observability', async (req, res) => {
+    const { error, params } = runParams(req.body);
+    if (error) return bad(res, error);
+    if (req.body.source !== undefined && req.body.source !== infoBody().source) return bad(res, 'Real record is not offered: this app has no live version, so there is no Real run to read logs for.', 409);
+    try {
+      return res.json(await buildRunRecord({ body: params, clock }));
+    } catch (e) {
+      console.error('[hostile-a2a] run-observability error:', e.message);
+      return res.status(e instanceof RunObsError ? e.status : 500).json({ error: 'run_observability_failed', message: e instanceof RunObsError ? e.message : 'The run observability record could not be built.' });
+    }
   });
 
   // The three-step flow: new (fetch #1) -> approve (pin it) -> compare (fetch the next card and check it).
@@ -143,7 +168,9 @@ export function createApp({ health = defaultHealth(), sessions = createSessions(
   api.post('/card-session/:id/compare', withSession((session, _req, res) => {
     if (!session.pinned.pins().length) return bad(res, 'approve a card first; there is nothing to compare against', 409);
     const next = session.getCard();
-    return res.json({ fetchNumber: next.fetchNumber, card: seen(next.card), check: session.check(next.card) });
+    const check = session.check(next.card);
+    logDecisions(decisionLog, [{ actor: 'pinned-client', outcome: check.verdict === 'ok' ? 'passed' : 'withheld', findings: check.findings }], { variant: session.variant, stage: `fetch-${next.fetchNumber}` });
+    return res.json({ fetchNumber: next.fetchNumber, card: seen(next.card), check });
   }));
   api.delete('/card-session/:id', (req, res) => (sessions.delete(req.params.id) ? res.status(204).end() : bad(res, 'no such session', 404)));
 
