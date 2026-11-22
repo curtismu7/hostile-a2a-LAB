@@ -119,9 +119,12 @@ export function createMasker() {
     if (key && (SECRET_KEY.test(key) || SHORT_KEYS.test(key))) return '***';
     if (typeof value === 'string') {
       if (budget.left <= 0) { budget.cut = true; return '…'; }
-      const out = mask(value.slice(0, Math.min(LIMITS.maxMaskInput, budget.left)), keep);
+      // A cut is only a REAL cut: the string was longer than the size cap or the budget left. Masking that replaces or shortens it (a declared id
+      // becomes first 4 + last 2, a secret becomes ***) is not a cut.
+      const room = Math.min(LIMITS.maxMaskInput, budget.left);
+      if (value.length > room) budget.cut = true;
+      const out = mask(value.slice(0, room), keep);
       budget.left -= out.length;
-      if (value.length > out.length) budget.cut = true;
       return out;
     }
     if (Array.isArray(value)) return value.slice(0, 50).map((v) => walk(v, keep, budget, key, depth + 1));
