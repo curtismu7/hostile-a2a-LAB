@@ -2,7 +2,7 @@
 
 ## 0.1.0 (in progress)
 
-- Run observability (rule 27): the shared `RunObservability` panel (vendored byte for byte from AI-DEMO-Standalone `shared/run-observability`, pinned) under the Run result, fed by `POST /api/run-observability`. Mock only: every row is `simulated` and computed from what the mock did; no Real record is offered (no live version). The server logs each decision (actor, outcome) as one timestamped stdout line. `RUN_OBS_ES_URL` and `RUN_OBS_ES_READ_APIKEY` added, empty, to `.env.example` and compose.
+- Run observability (rule 27): the shared `RunObservability` panel (vendored byte for byte from AI-DEMO-Standalone `shared/run-observability`, pinned) under the Run result, fed by `POST /api/run-observability`. Mock only: every row is `simulated` and is an event the server wrote to stdout for that run (one `hostile-a2a event` line each, actor and outcome, no tokens), with that line's own time (time = when the lab computed it); only the pinned client's verdict is a decision, every other row is `info`. No Real record is offered: the Run scenario is offline in both modes and the shared panel has no reader or matcher for this lab's lines.
 
 - Verification mark in the header: the shared `VerifyMark` (vendored from AI-DEMO-Standalone `shared/verify-mark`, byte for byte, pinned) shows this lab's Verified / In progress mark from the demo shelf, inside the top menu beside the Shelf link. It reads the same `GET /api/shelf` call the Shelf link makes, so it shows through the lab-proxy and nothing when the lab is opened on its own port, when the shelf has no mark for it, or when the shelf is unreachable.
 

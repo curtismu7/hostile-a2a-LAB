@@ -9,7 +9,8 @@ import { createHealth } from '../src/health.js';
 import { allPassed, runChecks } from '../src/doctor.js';
 import { createSessions } from '../src/session.js';
 import { assertRunObservability, createRunObservability, defaultLayers, readersFromEnv } from '../src/runObservability.js';
-import { decisionsOf, logDecisions } from '../src/decisionLog.js';
+import { eventsOf, logEvents } from '../src/decisionLog.js';
+import { createRunStore } from '../src/runRecord.js';
 import { runScenario } from '../src/scenario.js';
 import { VARIANT_IDS } from '../src/card.js';
 
@@ -33,16 +34,23 @@ async function withServer(fn, opts = {}) {
   const lines = [];
   const server = await startHttpServer(0, '127.0.0.1', { health, sessions: createSessions(), decisionLog: (l) => lines.push(l), ...opts });
   const base = `http://127.0.0.1:${server.port}`;
-  const post = (path, body) => fetch(`${base}${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  const post = (path, body, headers = {}) => fetch(`${base}${path}`, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) });
   try { await fn({ base, post, lines }); } finally { health.stop(); await server.close(); }
 }
 const TASK = 'Please refund my last order';
-const body = (extra = {}) => ({ task: TASK, stage: 'later', variant: 'rug-pull', ...extra });
+const victim = (extra = {}) => ({ task: TASK, stage: 'later', variant: 'rug-pull', ...extra });
+// What the Run page does: both clients under one runId, then the record for that runId.
+async function runBoth(post, runId, extra = {}, headers = {}) {
+  for (const mode of ['ungoverned', 'pinned']) assert.equal((await post('/api/run-victim', victim({ mode, runId, ...extra }), headers)).status, 200);
+}
+async function record(post, runId, extra = {}, headers = {}) { return (await post('/api/run-observability', { runId, ...extra }, headers)).json(); }
 const count = (rec, layer) => rec.rows.filter((r) => r.layer === layer && r.origin !== 'not-logged').length;
+const stamp = (line) => line.split(' ')[0];
 
 // ---- the Mock record --------------------------------------------------------------------------------------------
 test('POST /api/run-observability: a mock record, every row simulated, passes assertRunObservability', () => withServer(async ({ post }) => {
-  const res = await post('/api/run-observability', body());
+  await runBoth(post, 'run-1');
+  const res = await post('/api/run-observability', { runId: 'run-1' });
   assert.equal(res.status, 200);
   const rec = await res.json();
   assert.deepEqual(assertRunObservability(rec), []);
@@ -53,81 +61,167 @@ test('POST /api/run-observability: a mock record, every row simulated, passes as
   for (const l of ['agent', 'gateway', 'resource']) assert.equal(rec.coverage[l], 'simulated', l);
 }));
 
-test('the mock record holds exactly the events the mock computed for a rug-pull on the later fetch', () => withServer(async ({ post }) => {
-  const rec = await (await post('/api/run-observability', body())).json();
-  // ungoverned: fetch #1, fetch #2, generalist. pinned: fetch #1, approve, fetch #2, check (withheld), no generalist.
-  assert.equal(count(rec, 'resource'), 4);
+test('the mock record holds exactly the events the server wrote for a rug-pull on the later fetch, and only the pinned client decides', () => withServer(async ({ post }) => {
+  await runBoth(post, 'run-2');
+  const rec = await record(post, 'run-2');
+  // ungoverned: served, generalist. pinned: served, approved, withheld (no generalist: it never saw the card).
+  assert.equal(count(rec, 'resource'), 2);
   assert.equal(count(rec, 'gateway'), 2);
   assert.equal(count(rec, 'agent'), 1);
   const check = rec.rows.find((r) => r.layer === 'gateway' && r.outcome !== 'info');
   assert.equal(check.outcome, 'refused');
   assert.match(check.message, /withheld/);
   const agent = rec.rows.find((r) => r.layer === 'agent');
-  assert.equal(agent.outcome, 'allowed');
+  assert.equal(agent.outcome, 'info', 'building a poisoned message is not a decision');
   assert.equal(agent.detail.poisonLanded, true);
   assert.equal(agent.detail.sent, false);
-  assert.deepEqual(rec.summary, { allowed: 5, refused: 1, blocked: 0, info: 1 });
+  assert.ok(rec.rows.filter((r) => r.layer === 'resource' || r.layer === 'agent').every((r) => r.outcome === 'info'));
+  assert.deepEqual(rec.summary, { allowed: 0, refused: 1, blocked: 0, info: 4 });
 }));
 
-test('rows come in the order the mock computed them, with strictly increasing times', () => withServer(async ({ post }) => {
-  const rec = await (await post('/api/run-observability', body())).json();
-  const rows = rec.rows.filter((r) => r.origin === 'simulated');
-  assert.deepEqual(rows.map((r) => `${r.layer}:${r.detail.client}`), [
-    'resource:ungoverned', 'resource:ungoverned', 'agent:ungoverned', 'resource:pinned', 'gateway:pinned', 'resource:pinned', 'gateway:pinned']);
-  for (let i = 1; i < rows.length; i += 1) assert.ok(Date.parse(rows[i].at) > Date.parse(rows[i - 1].at), `row ${i}`);
-}));
-
-test('a clean card on day one: the pinned client passes it and the generalist ran behind it; nothing is refused', () => withServer(async ({ post }) => {
-  const rec = await (await post('/api/run-observability', body({ variant: 'clean', stage: 'first' }))).json();
+test('a clean card on day one: the pinned client passes it (the one allowed decision) and the generalist ran behind it', () => withServer(async ({ post }) => {
+  await runBoth(post, 'run-3', { variant: 'clean', stage: 'first' });
+  const rec = await record(post, 'run-3');
   assert.deepEqual(assertRunObservability(rec), []);
   assert.equal(count(rec, 'agent'), 2);
   assert.equal(count(rec, 'resource'), 2);
-  assert.equal(rec.summary.refused, 0);
-  assert.equal(rec.rows.filter((r) => r.layer === 'agent').every((r) => r.detail.poisonLanded === false), true);
+  assert.deepEqual(rec.summary, { allowed: 1, refused: 0, blocked: 0, info: 5 });
+  assert.equal(rec.rows.filter((r) => r.layer === 'agent').every((r) => r.detail.poisonLanded === false && r.outcome === 'info'), true);
 }));
 
-test('every card variant, both stages, signatures required or not: the record is valid and never claims a log', () => withServer(async ({ post }) => {
+test('every card variant, both stages, signatures required or not: the record is valid, never claims a log, allows only through the pinned client', () => withServer(async ({ post }) => {
+  let n = 0;
   for (const variant of VARIANT_IDS) for (const stage of ['first', 'later']) for (const requireSignatures of [false, true]) {
-    const rec = await (await post('/api/run-observability', body({ variant, stage, requireSignatures }))).json();
+    const runId = `run-v${n++}`;
+    await runBoth(post, runId, { variant, stage, requireSignatures });
+    const rec = await record(post, runId);
     assert.deepEqual(assertRunObservability(rec), [], `${variant}/${stage}/${requireSignatures}`);
     assert.ok(rec.rows.every((r) => r.origin !== 'logged' && r.origin !== 'response'));
+    assert.ok(rec.rows.filter((r) => r.outcome !== 'info').every((r) => r.layer === 'gateway'), `${variant}: only the pinned client decides`);
   }
 }));
 
-test('the record holds no task text, card text or token, whatever the task says', () => withServer(async ({ post }) => {
-  const nasty = `Bearer abcdefghijklmnop1234 <script>alert(1)</script> ${'x'.repeat(200)}`;
-  const rec = await (await post('/api/run-observability', body({ task: nasty.slice(0, 300) }))).json();
-  assert.deepEqual(assertRunObservability(rec), []);
-  const text = JSON.stringify(rec);
-  assert.ok(!text.includes('abcdefghijklmnop1234') && !text.includes('<script>') && !text.includes('xxxxxxxx'));
+// ---- the honesty rule for times: the record carries the very times the lab wrote to stdout ---------------------------
+test('the record row times equal the stdout line times for the same run (real clock)', () => withServer(async ({ post, lines }) => {
+  await runBoth(post, 'run-t1');
+  const rec = await record(post, 'run-t1');
+  const rows = rec.rows.filter((r) => r.origin === 'simulated');
+  assert.equal(rows.length, lines.length);
+  assert.deepEqual(rows.map((r) => r.atExact).sort(), lines.map(stamp).sort());
+  assert.deepEqual(rows.map((r) => r.at).sort(), lines.map(stamp).sort());
+  assert.equal(rec.window.from, [...lines.map(stamp)].sort()[0]);
+  assert.equal(rec.window.to, [...lines.map(stamp)].sort().at(-1));
 }));
 
-test('bad bodies answer JSON {error, message} (rule 23)', () => withServer(async ({ post }) => {
-  for (const b of [{}, { task: '' }, { task: 'x'.repeat(301) }, body({ stage: 'never' }), body({ variant: 'nope' }), body({ requireSignatures: 'yes' })]) {
-    const r = await post('/api/run-observability', b);
-    assert.equal(r.status, 400, JSON.stringify(b).slice(0, 60));
+test('a stepping clock: the ungoverned call and the pinned call get their own times; every row has its line time', async () => {
+  let t = Date.parse('2026-11-22T10:00:00.000Z');
+  const clock = () => { const v = t; t += 250; return v; };
+  await withServer(async ({ post, lines }) => {
+    await runBoth(post, 'run-t3');
+    const rec = await record(post, 'run-t3');
+    const rows = rec.rows.filter((r) => r.origin === 'simulated');
+    assert.deepEqual([...new Set(rows.map((r) => r.at))], ['2026-11-22T10:00:00.000Z', '2026-11-22T10:00:00.250Z']);
+    assert.deepEqual(rows.map((r) => r.at).sort(), lines.map(stamp).sort());
+    // the first call's events (served, generalist) carry the first time; the second call's (served, approved, withheld) the second
+    assert.deepEqual(rows.filter((r) => r.at.endsWith('00.000Z')).map((r) => r.detail.client), ['ungoverned', 'ungoverned']);
+  }, { clock });
+});
+
+test('a frozen clock: every event keeps the one real time (no invented bumps) and the order they were written in', async () => {
+  const clock = () => Date.parse('2026-11-22T10:00:00.000Z');
+  await withServer(async ({ post }) => {
+    await runBoth(post, 'run-t4');
+    const rec = await record(post, 'run-t4');
+    const rows = rec.rows.filter((r) => r.origin === 'simulated');
+    assert.equal(new Set(rows.map((r) => r.at)).size, 1);
+    assert.equal(rec.window.from, rec.window.to);
+    assert.deepEqual(rows.map((r) => r.layer), ['resource', 'resource', 'gateway', 'gateway', 'agent']);
+  }, { clock });
+});
+
+test('the record is built from stored events, not a re-run: the scenario runs once per run-victim call', () => withServer(async ({ post }) => {
+  await runBoth(post, 'run-t5');
+  const a = await record(post, 'run-t5');
+  await new Promise((r) => setTimeout(r, 15));
+  const b = await record(post, 'run-t5');
+  assert.deepEqual(b.rows, a.rows, 'asking again later gives the same rows with the same times');
+}));
+
+// ---- the request ------------------------------------------------------------------------------------------------
+test('unknown runId 404, missing or malformed runId 400, another workspace cannot read the run; all JSON {error, message} (rule 23)', () => withServer(async ({ post }) => {
+  await runBoth(post, 'run-w1');
+  const check = async (body, status, headers) => {
+    const r = await post('/api/run-observability', body, headers);
+    assert.equal(r.status, status, JSON.stringify(body));
     assert.match(r.headers.get('content-type'), /json/);
-    const j = await r.json();
-    assert.equal(j.error, 'bad_request'); assert.ok(j.message);
+    const j = await r.json(); assert.ok(j.error && j.message);
+  };
+  await check({ runId: 'never-ran' }, 404);
+  await check({}, 400);
+  await check({ runId: 5 }, 400);
+  await check({ runId: 'has space' }, 400);
+  await check({ runId: 'x'.repeat(65) }, 400);
+  await check({ runId: 'run-w1' }, 404, { 'x-workspace': 'someone-else' });
+}));
+
+test('run-victim refuses a malformed runId (400) and still answers without one', () => withServer(async ({ post }) => {
+  assert.equal((await post('/api/run-victim', victim({ mode: 'pinned', runId: 'no good' }))).status, 400);
+  assert.equal((await post('/api/run-victim', victim({ mode: 'pinned' }))).status, 200);
+}));
+
+test('each run has its own runId on the record; the record echoes it', () => withServer(async ({ post }) => {
+  await runBoth(post, 'run-a'); await runBoth(post, 'run-b');
+  const a = await record(post, 'run-a'); const b = await record(post, 'run-b');
+  assert.equal(a.runId, 'run-a'); assert.equal(b.runId, 'run-b');
+  assert.equal(count(a, 'resource'), 2, 'run-b did not leak into run-a');
+}));
+
+test('source: null or absent is a mock record; "mock" too; "real" is refused 409 with the true reason; anything else is 400', () => withServer(async ({ post }) => {
+  await runBoth(post, 'run-s');
+  for (const source of [undefined, null, 'mock']) {
+    const r = await post('/api/run-observability', { runId: 'run-s', ...(source === undefined ? {} : { source }) });
+    assert.equal(r.status, 200, String(source));
+    assert.equal((await r.json()).source, 'mock');
   }
+  const real = await post('/api/run-observability', { runId: 'run-s', source: 'real' });
+  assert.equal(real.status, 409);
+  const j = await real.json();
+  assert.equal(j.error, 'conflict');
+  assert.match(j.message, /offline in both modes/); assert.match(j.message, /no reader or matcher/);
+  assert.doesNotMatch(j.message, /no live version/);
+  assert.equal((await post('/api/run-observability', { runId: 'run-s', source: 'live' })).status, 400);
+}));
+
+test('the record and the stdout lines hold no task text, card text or token, whatever the task says', () => withServer(async ({ post, lines }) => {
+  const nasty = `Bearer abcdefghijklmnop1234 <script>alert(1)</script> ${'x'.repeat(200)}`.slice(0, 300);
+  await runBoth(post, 'run-n', { task: nasty });
+  const rec = await record(post, 'run-n');
+  assert.deepEqual(assertRunObservability(rec), []);
+  for (const text of [JSON.stringify(rec), lines.join('\n')]) assert.ok(!text.includes('abcdefghijklmnop1234') && !text.includes('<script>') && !text.includes('xxxxxxxx'));
 }));
 
 // ---- Mock / Real switch -----------------------------------------------------------------------------------------
-test('mode switch both ways: the record follows the lab mode (always mock here); a Real record is refused with 409; /api/info is unchanged', () => withServer(async ({ base, post }) => {
+// Hermetic: realDoorFrom reads HAA_* from the environment and the settings file, so point both at nothing; the test then holds on a machine with Real settings.
+async function withNoRealSettings(fn) {
+  const saved = {};
+  for (const k of Object.keys(process.env)) if (k.startsWith('HAA_') || k === 'STANDALONE_ENV') { saved[k] = process.env[k]; delete process.env[k]; }
+  process.env.STANDALONE_ENV = '/nonexistent/hostile-a2a-test.env';
+  try { return await fn(); } finally { delete process.env.STANDALONE_ENV; Object.assign(process.env, saved); }
+}
+
+test('with no Real settings: Mock to Real is refused (409) and back to Mock works; the record stays a mock record throughout and /api/info is unchanged', () => withNoRealSettings(() => withServer(async ({ base, post }) => {
   const info = () => fetch(`${base}/api/info`).then((r) => r.json());
   const before = await info();
   assert.deepEqual(before, { mode: 'local', hosted: false, source: 'mock', realAvailable: false, workspaceId: 'default' });
+  await runBoth(post, 'run-m');
   assert.equal((await post('/api/mode', { source: 'mock' })).status, 200);
-  assert.equal((await (await post('/api/run-observability', body())).json()).source, 'mock');
+  assert.equal((await record(post, 'run-m')).source, 'mock');
   assert.equal((await post('/api/mode', { source: 'real' })).status, 409);
-  const real = await post('/api/run-observability', body({ source: 'real' }));
-  assert.equal(real.status, 409);
-  const j = await real.json();
-  assert.equal(j.error, 'conflict'); assert.match(j.message, /not offered/);
+  assert.equal((await post('/api/run-observability', { runId: 'run-m', source: 'real' })).status, 409);
   assert.equal((await post('/api/mode', { source: 'mock' })).status, 200);
-  assert.equal((await (await post('/api/run-observability', body({ source: 'mock' }))).json()).source, 'mock');
+  assert.equal((await record(post, 'run-m', { source: 'mock' })).source, 'mock');
   assert.deepEqual(await info(), before);
-}));
+})));
 
 // ---- a Real record against an in-process fake Elasticsearch -------------------------------------------------------
 // The lab offers no Real record (it has no live version). This proves the vendored collector, in the lab's Node, builds a record that passes the
@@ -168,27 +262,31 @@ test('a real record from a fake Elasticsearch passes assertRunObservability; a r
   } finally { denied.close(); }
 });
 
-// ---- the lab's own decision log lines ----------------------------------------------------------------------------
-test('run-victim logs one timestamped line per decision: actor and outcome, no task, no card text, no token', () => withServer(async ({ post, lines }) => {
-  const r = await post('/api/run-victim', { ...body(), mode: 'ungoverned' });
-  assert.equal(r.status, 200);
-  const p = await post('/api/run-victim', { ...body(), mode: 'pinned' });
-  assert.equal(p.status, 200);
-  assert.equal(lines.length, 2); // ungoverned: the generalist; pinned: the pinned client withheld the card, so no generalist decision
-  for (const l of lines) assert.match(l, /^\d{4}-\d\d-\d\dT[\d:.]+Z hostile-a2a decision actor=[a-z-]+ outcome=[a-z-]+ variant=rug-pull stage=later/);
-  assert.match(lines[0], /actor=generalist-ungoverned outcome=poison-landed/);
-  assert.match(lines[1], /actor=pinned-client outcome=withheld .*findings=/);
-  const clean = await post('/api/run-victim', { ...body({ variant: 'clean', stage: 'first' }), mode: 'pinned' });
+// ---- the lab's own log lines ------------------------------------------------------------------------------------
+test('run-victim writes one timestamped line per event: actor and outcome, no task, no card text, no token; the pinned verdicts are the decisions', () => withServer(async ({ post, lines }) => {
+  assert.equal((await post('/api/run-victim', { ...victim(), mode: 'ungoverned' })).status, 200);
+  assert.equal((await post('/api/run-victim', { ...victim(), mode: 'pinned' })).status, 200);
+  assert.equal(lines.length, 5); // ungoverned: served, generalist. pinned: served, approved, withheld (no generalist: it never saw the card)
+  for (const l of lines) assert.match(l, /^\d{4}-\d\d-\d\dT[\d:.]+Z hostile-a2a event actor=[a-z-]+ outcome=[a-z-]+ client=(ungoverned|pinned) /);
+  for (const l of lines) assert.match(l, / variant=rug-pull stage=later/);
+  assert.match(lines[0], /actor=hostile-specialist outcome=served client=ungoverned fetches=2/);
+  assert.match(lines[1], /actor=generalist-ungoverned outcome=poison-landed client=ungoverned/);
+  assert.match(lines[2], /actor=hostile-specialist outcome=served client=pinned fetches=2/);
+  assert.match(lines[3], /actor=pinned-client outcome=approved client=pinned/);
+  assert.match(lines[4], /actor=pinned-client outcome=withheld client=pinned .*findings=/);
+  const clean = await post('/api/run-victim', { ...victim({ variant: 'clean', stage: 'first' }), mode: 'pinned' });
   assert.equal(clean.status, 200);
-  assert.match(lines[2], /actor=pinned-client outcome=passed variant=clean stage=first$/);
-  assert.match(lines[3], /actor=generalist-behind-pin outcome=delegated variant=clean/);
+  assert.match(lines[7], /actor=pinned-client outcome=passed client=pinned variant=clean stage=first$/);
+  assert.match(lines[8], /actor=generalist-behind-pin outcome=delegated client=pinned variant=clean/);
   for (const l of lines) assert.ok(!l.includes('refund') && !/Bearer|eyJ/.test(l));
 }));
 
-test('a rejected run logs nothing; the observability route logs nothing (the two run-victim calls already did)', () => withServer(async ({ post, lines }) => {
+test('a rejected run logs nothing; the observability route logs nothing', () => withServer(async ({ post, lines }) => {
   assert.equal((await post('/api/run-victim', { task: '', mode: 'pinned' })).status, 400);
-  assert.equal((await post('/api/run-observability', body())).status, 200);
-  assert.deepEqual(lines, []);
+  await runBoth(post, 'run-l');
+  const before = lines.length;
+  assert.equal((await post('/api/run-observability', { runId: 'run-l' })).status, 200);
+  assert.equal(lines.length, before);
 }));
 
 test('card-session compare logs the pinned client verdict', () => withServer(async ({ post, lines }) => {
@@ -196,16 +294,29 @@ test('card-session compare logs the pinned client verdict', () => withServer(asy
   await post(`/api/card-session/${s.sessionId}/approve`, {});
   await post(`/api/card-session/${s.sessionId}/compare`, {});
   assert.equal(lines.length, 1);
-  assert.match(lines[0], /actor=pinned-client outcome=withheld variant=rug-pull stage=fetch-2 findings=/);
+  assert.match(lines[0], /actor=pinned-client outcome=withheld client=pinned variant=rug-pull stage=fetch-2 findings=/);
   assert.ok(!lines[0].includes(s.sessionId));
 }));
 
-test('decisionsOf: a withheld card has no generalist decision; an ungoverned run has no pinned decision', () => {
+test('eventsOf: a withheld card has no generalist event; an ungoverned run has no pinned event; logEvents stamps one time on every line', () => {
   const pinned = runScenario({ task: TASK, mode: 'pinned', stage: 'later', variant: 'rug-pull' });
-  assert.deepEqual(decisionsOf(pinned).map((d) => d.actor), ['pinned-client']);
-  const ungoverned = runScenario({ task: TASK, mode: 'ungoverned', stage: 'later', variant: 'clean' });
-  assert.deepEqual(decisionsOf(ungoverned), [{ actor: 'generalist-ungoverned', outcome: 'delegated' }]);
+  assert.deepEqual(eventsOf(pinned).map((e) => `${e.actor}:${e.outcome}`), ['hostile-specialist:served', 'pinned-client:approved', 'pinned-client:withheld']);
+  const ungoverned = runScenario({ task: TASK, mode: 'ungoverned', stage: 'first', variant: 'clean' });
   const out = [];
-  logDecisions((l) => out.push(l), decisionsOf(ungoverned), { variant: 'clean', stage: 'later', now: () => new Date('2026-11-22T10:00:00Z') });
-  assert.deepEqual(out, ['2026-11-22T10:00:00.000Z hostile-a2a decision actor=generalist-ungoverned outcome=delegated variant=clean stage=later']);
+  const stamped = logEvents((l) => out.push(l), eventsOf(ungoverned), { variant: 'clean', stage: 'first', at: '2026-11-22T10:00:00.000Z' });
+  assert.deepEqual(out, [
+    '2026-11-22T10:00:00.000Z hostile-a2a event actor=hostile-specialist outcome=served client=ungoverned fetches=1 variant=clean stage=first',
+    '2026-11-22T10:00:00.000Z hostile-a2a event actor=generalist-ungoverned outcome=delegated client=ungoverned variant=clean stage=first',
+  ]);
+  assert.ok(stamped.every((e) => e.at === '2026-11-22T10:00:00.000Z'));
+});
+
+test('the run store is bounded per workspace and per runs, and keeps each workspace apart', () => {
+  const store = createRunStore({ maxRuns: 2, maxWorkspaces: 2 });
+  store.add('w1', 'a', [{ n: 1 }]); store.add('w1', 'b', [{ n: 2 }]); store.add('w1', 'c', [{ n: 3 }]);
+  assert.equal(store.get('w1', 'a'), null, 'the oldest run is dropped');
+  assert.deepEqual(store.get('w1', 'c'), [{ n: 3 }]);
+  store.add('w2', 'a', [{ n: 4 }]); store.add('w3', 'a', [{ n: 5 }]);
+  assert.equal(store.get('w1', 'c'), null, 'the oldest workspace is dropped');
+  assert.equal(store.get('w2', 'zzz'), null);
 });

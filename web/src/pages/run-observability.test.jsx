@@ -18,21 +18,30 @@ test("before a run the panel shows its empty state and where the logs live", () 
   render(<Run />);
   expect(screen.getByTestId("ro-empty")).toHaveTextContent("Run the demo");
   expect(screen.getByTestId("ro-streams")).toHaveTextContent("demo-logs-hostile-a2a");
+  expect(screen.queryByTestId("ro-lane-note")).toBeInTheDocument();
 });
 
-test("after a run the record the server built is shown under the result, labelled simulated, and the request carries the run's fields", async () => {
+test("after a run the record the server built is shown under the result, labelled simulated, and the three calls share one run id", async () => {
   const f = stub({ "POST /api/run-observability": mockRecord });
   render(<Run />);
   await go();
   expect(await screen.findByTestId("ro-lanes")).toBeInTheDocument();
   expect(screen.getByTestId("ro-basis")).toHaveTextContent("Simulated");
-  const call = f.mock.calls.find(([url]) => url === "/api/run-observability");
-  expect(JSON.parse(call[1].body)).toMatchObject({ task: "Please refund my last order", stage: "later", variant: "poisoned" });
+  const bodies = (path) => f.mock.calls.filter(([url]) => url === path).map(([, init]) => JSON.parse(init.body));
+  const [first, second] = bodies("/api/run-victim");
+  expect(first).toMatchObject({ task: "Please refund my last order", stage: "later", variant: "poisoned" });
+  expect(first.runId).toMatch(/^run-[a-z0-9]+-[a-z0-9]+$/);
+  expect(second.runId).toBe(first.runId);
+  expect(bodies("/api/run-observability")).toEqual([{ runId: first.runId }]);
   const result = screen.getByTestId("result-pinned");
   const panel = screen.getByTestId("run-observability");
   expect(result.compareDocumentPosition(panel) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(panel.querySelectorAll('tr[data-origin="logged"]')).toHaveLength(0);
   expect(panel.querySelectorAll('tr[data-origin="simulated"]').length).toBeGreaterThan(0);
+  const note = screen.getByTestId("ro-lane-note");
+  expect(note).toHaveTextContent("Time = when the lab computed it");
+  expect(note).toHaveTextContent("Agent gateway lane holds this lab's own pinned client (not a gateway product)");
+  expect(note).toHaveTextContent("Resource server lane holds the hostile specialist");
 });
 
 test("a failed collection is named in the panel and the run result stays", async () => {
@@ -56,6 +65,8 @@ test("in Real the page offers no record and asks the server for none", async () 
   await go();
   expect(await screen.findByTestId("result-pinned")).toBeInTheDocument();
   expect(screen.getByTestId("ro-real-not-offered")).toHaveTextContent("not offered");
+  expect(screen.getByTestId("ro-real-not-offered")).toHaveTextContent("offline in both modes");
+  expect(screen.getByTestId("ro-real-not-offered")).not.toHaveTextContent("no live version");
   expect(screen.queryByTestId("run-observability")).toBeNull();
   expect(f.mock.calls.some(([url]) => url === "/api/run-observability")).toBe(false);
 });

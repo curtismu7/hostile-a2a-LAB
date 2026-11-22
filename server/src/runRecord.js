@@ -1,62 +1,66 @@
 // Rule 27: the run-observability record for ONE run of this lab (both clients), built with the shared collector (runObservability.js, vendored, never edited).
 //
-// MOCK only. Every row is computed from what this lab's mock actually did on this run (the scenario result of each client: the card fetches,
-// the pinned client's verdict, the generalist's decision), stamped with the time the server built it (1 ms apart where the mock computed them in the same millisecond). No event is added that the mock did not compute.
-// Real is NOT offered: this lab has no live version (GET /api/info says realAvailable false), so there is no Real record to build.
+// MOCK only. The rows are the events the lab's server wrote to stdout for this run (decisionLog.js), kept with the very time on their stdout line when they were
+// written (the run store, per workspace). Nothing is re-computed and no time is adjusted: if several events share a millisecond they keep that equal time
+// and the order they were written in. Time = when the lab computed it; none of it was read from a product log.
 //
-// What is not here, and why each layer says "not logged":
-//   person, authorize, privilege : this lab has no sign-in, no PingOne Authorize and no Privilege in the run.
+// Real record: NOT offered. The Run scenario is offline in both modes, and the shared panel has no reader or matcher for this lab's decision lines
+// (a matcher would be added to the shared panel first), so there is nothing a Real record could read.
+//
+// Outcomes: only the pinned client decides anything here (passed = allowed, withheld = refused). Every other row (the specialist serving the card, the
+// pinned client's approval, what the generalist built) is `info`, never allowed.
 import { createRunObservability } from './runObservability.js';
-import { runScenario } from './scenario.js';
 
-const PRODUCT = { specialist: 'lab mock: hostile specialist', pinned: 'lab mock: pinned client', generalist: 'lab mock: generalist' };
+const PRODUCT = { 'hostile-specialist': 'lab mock: hostile specialist', 'pinned-client': 'lab mock: pinned client', 'generalist-ungoverned': 'lab mock: generalist', 'generalist-behind-pin': 'lab mock: generalist' };
 
-// The events one client's scenario result holds, in the order the mock computed them.
-function eventsOf(run, at) {
-  const ev = [];
-  const fetches = run.stage === 'later' ? 2 : 1;
-  const served = (n) => ev.push({ layer: 'resource', product: PRODUCT.specialist, outcome: 'allowed', at: at(), message: `The hostile specialist served its Agent Card (fetch #${n}, card variant ${run.variant}). Nothing in A2A discovery inspects the text.`, detail: { client: run.mode, fetch: n, variant: run.variant } });
-  served(1);
-  if (run.pinned) ev.push({ layer: 'gateway', product: PRODUCT.pinned, outcome: 'info', at: at(), message: 'The pinned client approved fetch #1 (trust on first use). Approval does not read the content.', detail: { client: run.mode, sha256: run.pinned.approval.pin.sha256.slice(0, 12) } });
-  if (fetches === 2) served(2);
-  if (run.pinned) {
-    const { check, withheld } = run.pinned;
-    ev.push({
-      layer: 'gateway', product: PRODUCT.pinned, outcome: withheld ? 'refused' : 'allowed', at: at(),
-      message: withheld ? `The pinned client withheld the card before the generalist read it: ${check.findings.join(', ')}.` : 'The pinned client passed the card: nothing changed and the scanner flagged nothing.',
-      detail: { client: run.mode, verdict: check.verdict, findings: check.findings },
-    });
+// One stored event -> one simulated row.
+export function rowOf(e) {
+  const base = { product: PRODUCT[e.actor], at: e.at, detail: { client: e.client, variant: e.variant, stage: e.stage } };
+  if (e.actor === 'hostile-specialist') {
+    return { ...base, layer: 'resource', outcome: 'info', message: `The hostile specialist served its Agent Card (${e.fetches} fetch${e.fetches > 1 ? 'es' : ''}, card variant ${e.variant}). Serving is not a decision: nothing in A2A discovery inspects the text.`, detail: { ...base.detail, fetches: e.fetches } };
   }
-  if (!run.pinned?.withheld) {
-    const d = run.victim.delegation;
-    const landed = run.summary.poisonLanded;
-    ev.push({
-      layer: 'agent', product: PRODUCT.generalist, outcome: d ? 'allowed' : 'info', at: at(),
-      message: !d ? 'The generalist read the card and had nothing to delegate.' : landed ? 'The generalist read the card and built a delegation message carrying the poison (nothing was sent).' : 'The generalist read the card and built a clean delegation message (nothing was sent).',
-      detail: { client: run.mode, sent: false, poisonLanded: landed, steps: run.victim.steps.length },
-    });
+  if (e.actor === 'pinned-client') {
+    if (e.outcome === 'approved') return { ...base, layer: 'gateway', outcome: 'info', message: 'The pinned client approved fetch #1 (trust on first use). Approval does not read the content.' };
+    const withheld = e.outcome === 'withheld';
+    return {
+      ...base, layer: 'gateway', outcome: withheld ? 'refused' : 'allowed',
+      message: withheld ? `The pinned client withheld the card before the generalist read it: ${e.findings.join(', ')}.` : 'The pinned client passed the card: nothing changed and the scanner flagged nothing.',
+      detail: { ...base.detail, findings: e.findings },
+    };
   }
-  return ev;
+  const landed = e.outcome === 'poison-landed';
+  return {
+    ...base, layer: 'agent', outcome: 'info',
+    message: e.outcome === 'no-delegation' ? 'The generalist read the card and had nothing to delegate.' : landed ? 'The generalist read the card and built a delegation message carrying the poison (nothing was sent). Building a message is not a decision.' : 'The generalist read the card and built a clean delegation message (nothing was sent).',
+    detail: { ...base.detail, sent: false, poisonLanded: landed },
+  };
 }
 
 const NONE = (what) => `This lab has no ${what}, so nothing happened in this layer during the run.`;
 
-// `body` is the validated run-victim body ({ task, stage, variant, requireSignatures }); `clock` is injectable for tests.
-export async function buildRunRecord({ body, clock = () => Date.now(), runId = `run-${clock().toString(36)}` }) {
-  const startedAt = clock();
-  const runs = ['ungoverned', 'pinned'].map((mode) => runScenario({ ...body, mode, requireSignatures: mode === 'pinned' && body.requireSignatures === true }));
-  // Events are computed within the same millisecond: each stamp is the clock, moved forward 1 ms when needed so the time order is the order the mock computed them in.
-  let last = 0;
-  const at = () => new Date((last = Math.max(clock(), last + 1))).toISOString();
-  const events = runs.flatMap((r) => eventsOf(r, at));
-  const simulated = (layer) => events.filter((e) => e.layer === layer);
-  const layers = [
-    { layer: 'person', simulated: [], reason: NONE('sign-in') },
-    { layer: 'agent', simulated: simulated('agent') },
-    { layer: 'authorize', simulated: [], reason: NONE('PingOne Authorize') },
-    { layer: 'privilege', simulated: [], reason: NONE('Privilege') },
-    { layer: 'gateway', simulated: simulated('gateway') },
-    { layer: 'resource', simulated: simulated('resource') },
-  ];
-  return createRunObservability({ clock }).collectRun({ runId, startedAt, endedAt: Math.max(clock(), last), layers, source: 'mock' });
+// `events` are the stored events of one run (stamped, in the order they were written); `runId` is the run's own id.
+// The record's window runs from the first event's time to the last; the clock is only used by the collector for an open window, which never happens here.
+export async function buildRunRecord({ events, runId }) {
+  const rows = events.map(rowOf);
+  const times = rows.map((r) => Date.parse(r.at));
+  // Layer order decides the order of rows that share a millisecond (the collector's sort is stable): resource, gateway, agent is the order the events are written in.
+  const layers = ['resource', 'gateway', 'agent'].map((layer) => ({ layer, simulated: rows.filter((r) => r.layer === layer) }));
+  layers.unshift({ layer: 'person', simulated: [], reason: NONE('sign-in') });
+  layers.push({ layer: 'authorize', simulated: [], reason: NONE('PingOne Authorize') }, { layer: 'privilege', simulated: [], reason: NONE('Privilege') });
+  return createRunObservability().collectRun({ runId, startedAt: Math.min(...times), endedAt: Math.max(...times), layers, source: 'mock' });
+}
+
+// The events of the recent runs, per workspace (the visitor's own scope), each kept with its stdout time. Bounded: nothing here grows without limit.
+export function createRunStore({ maxRuns = 20, maxWorkspaces = 100 } = {}) {
+  const spaces = new Map();
+  return {
+    add(workspace, runId, events) {
+      if (!spaces.has(workspace)) { if (spaces.size >= maxWorkspaces) spaces.delete(spaces.keys().next().value); spaces.set(workspace, new Map()); }
+      const runs = spaces.get(workspace);
+      if (!runs.has(runId)) { if (runs.size >= maxRuns) runs.delete(runs.keys().next().value); runs.set(runId, []); }
+      runs.get(runId).push(...events);
+    },
+    get: (workspace, runId) => spaces.get(workspace)?.get(runId) ?? null,
+    clear: () => spaces.clear(),
+  };
 }

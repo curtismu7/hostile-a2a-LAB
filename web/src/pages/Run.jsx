@@ -26,9 +26,11 @@ export const POISONS = [
 ];
 // Rule 27: where this lab's logs live and where they stream (the README says the same).
 export const STREAMS = [
-  { product: "hostile-a2a (this lab's server)", lives: "its container stdout, one timestamped line per decision (actor, outcome)", streams: "the collector to demo-logs-hostile-a2a, then a SIEM (the shared panel has no matcher for these lines yet, so a Real record would show them as not logged)" },
+  { product: "hostile-a2a (this lab's server)", lives: "its container stdout, one timestamped line per event (actor, outcome); the rows above carry those same times", streams: "the collector to demo-logs-hostile-a2a, then a SIEM (the shared panel has no reader or matcher for these lines yet, so no Real record is offered)" },
   { product: "Hostile specialist, pinned client, generalist (Mock)", lives: "nowhere: the lab's mock computed them and no product log exists", streams: "nowhere" },
 ];
+// One id per press of "Run both clients": both run-victim calls carry it, and the server builds the record from the events it stored for it.
+const newRunId = () => `run-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 const STAGES = [["first", "Day one: the card as first fetched"], ["later", "Later: the next fetch of the card"]];
 
 const FINDING_TEXT = {
@@ -154,12 +156,13 @@ export default function Run({ present, source = "mock" }) {
   async function go() {
     setBusy(true); setError(""); setRuns(null); setRecord(null);
     const p = POISONS[poison];
-    const base = { task: TASKS[task].text, stage, variant: p.id === "unsigned" ? "clean" : p.id };
+    const runId = newRunId();
+    const base = { task: TASKS[task].text, stage, variant: p.id === "unsigned" ? "clean" : p.id, runId };
     try {
       const [ungoverned, pinned] = await Promise.all([runVictim({ ...base, mode: "ungoverned" }), runVictim({ ...base, mode: "pinned", requireSignatures: p.id === "unsigned" })]);
       setRuns({ ungoverned, pinned });
       // Mock only: this lab offers no Real record. A failure is shown in the panel as {error, message}, the run result stays.
-      if (source !== "real") setRecord(await runObservability({ ...base, requireSignatures: p.id === "unsigned" }).catch((e) => ({ error: "run_observability_failed", message: e.message })));
+      if (source !== "real") setRecord(await runObservability(runId).catch((e) => ({ error: "run_observability_failed", message: e.message })));
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
 
@@ -194,8 +197,16 @@ export default function Run({ present, source = "mock" }) {
         </div>
       )}
       {source === "real"
-        ? <p className="muted small" data-testid="ro-real-not-offered">What each layer logged: a Real record is not offered. This app has no live version, so there is no Real run to read logs for. Switch to Mock to see the simulated record.</p>
-        : <RunObservability record={record} source="mock" streams={STREAMS} />}
+        ? <p className="muted small" data-testid="ro-real-not-offered">What each layer logged: a Real record is not offered. The Run scenario is offline in both modes, and the shared panel has no reader or matcher for this lab's decision lines. Switch to Mock to see the simulated record.</p>
+        : (
+          <>
+            <RunObservability record={record} source="mock" streams={STREAMS} />
+            <p className="muted small" data-testid="ro-lane-note">
+              Time = when the lab computed it: the same time as its stdout line for that event. The Agent gateway lane holds this lab's own pinned client (not a gateway product),
+              the Resource server lane holds the hostile specialist, and the Agent lane holds the generalist. Only the pinned client decides; every other row is for information.
+            </p>
+          </>
+        )}
     </>
   );
 }

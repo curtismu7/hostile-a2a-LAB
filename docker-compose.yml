@@ -15,11 +15,6 @@ services:
       # Extra Host names the demo API answers besides loopback; every other Host is refused. The default is the name the
       # family lab-proxy (https://local.ping-devops.com:8443/hostile-a2a/) sends in Host.
       LAB_ALLOWED_HOSTS: ${LAB_ALLOWED_HOSTS:-hostile-a2a.local.ping-devops.com}
-      # Run observability (rule 27), empty by default. This lab is Mock only and builds no Elasticsearch reader today; the names are passed
-      # through so the settings are in one place. A loopback Elasticsearch URL only (inside the container loopback is the container itself),
-      # and a READ-ONLY key. The Docker socket is never mounted here.
-      RUN_OBS_ES_URL: ${RUN_OBS_ES_URL:-}
-      RUN_OBS_ES_READ_APIKEY: ${RUN_OBS_ES_READ_APIKEY:-}
     read_only: true
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
