@@ -126,8 +126,8 @@ test('the guard itself works: it trips on a fetch, a socket and a DNS lookup to 
 const BANNED = /(?<![.\w])fetch\s*\(|node:https?['"]|node:net['"]|node:tls['"]|node:dns['"]|node:child_process['"]|undici|XMLHttpRequest|WebSocket|(?<![.\w?])https?\.request\s*\(|ClientTransport/;
 const codeOnly = (text) => text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '').replace(/\s\/\/ .*$/gm, ''); // comments may name things; code may not
 
-test('no server file (the vendored core included) builds or names a log reader or the Docker socket in code', () => {
-  for (const f of walk(SRC).filter((x) => x.endsWith('.js'))) assert.doesNotMatch(codeOnly(fs.readFileSync(f, 'utf8')), /readersFromEnv|DockerLogReader|ElasticsearchReader|socketPath/, path.relative(SRC, f));
+test('no server file (the vendored core included) builds or names a log reader or the Docker socket, comments too', () => {
+  for (const f of walk(SRC).filter((x) => x.endsWith('.js'))) assert.doesNotMatch(fs.readFileSync(f, 'utf8'), /readersFromEnv|DockerLogReader|ElasticsearchReader|socketPath/, path.relative(SRC, f));
   assert.ok(!fs.existsSync(path.join(SRC, 'runObservabilityReaders.js')), 'this lab reads no logs, so it does not vendor the readers file');
 });
 

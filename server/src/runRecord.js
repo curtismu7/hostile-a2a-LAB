@@ -43,7 +43,7 @@ const NONE = (what) => `This lab has no ${what}, so nothing happened in this lay
 export async function buildRunRecord({ events, runId }) {
   const rows = events.map(rowOf);
   const times = rows.map((r) => Date.parse(r.at));
-  // Rows that share a millisecond keep that equal time; the collector orders such ties by layer (it regroups rows by layer when it applies its row cap), not by the order they were written in. detail.client tells the two clients apart.
+  // Rows that share a millisecond keep that equal time and the order they were written in (the collector's sort keeps ties in the order given; layers are listed in write order below). detail.client tells the two clients apart.
   const layers = ['resource', 'gateway', 'agent'].map((layer) => ({ layer, simulated: rows.filter((r) => r.layer === layer) }));
   layers.unshift({ layer: 'person', simulated: [], reason: NONE('sign-in') });
   layers.push({ layer: 'authorize', simulated: [], reason: NONE('PingOne Authorize') }, { layer: 'privilege', simulated: [], reason: NONE('Privilege') });

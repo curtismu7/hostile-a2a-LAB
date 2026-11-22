@@ -66,7 +66,7 @@ test('the mock record holds exactly the events the server wrote for a rug-pull o
   assert.equal(agent.detail.poisonLanded, true);
   assert.equal(agent.detail.sent, false);
   assert.ok(rec.rows.filter((r) => r.layer === 'resource' || r.layer === 'agent').every((r) => r.outcome === 'info'));
-  assert.deepEqual(rec.summary, { allowed: 0, refused: 1, blocked: 0, info: 4 });
+  assert.deepEqual(rec.summary, { allowed: 0, refused: 1, blocked: 0, info: 4, unverified: 0 });
 }));
 
 test('a clean card on day one: the pinned client passes it (the one allowed decision) and the generalist ran behind it', () => withServer(async ({ post }) => {
@@ -75,7 +75,7 @@ test('a clean card on day one: the pinned client passes it (the one allowed deci
   assert.deepEqual(assertRunObservability(rec), []);
   assert.equal(count(rec, 'agent'), 2);
   assert.equal(count(rec, 'resource'), 2);
-  assert.deepEqual(rec.summary, { allowed: 1, refused: 0, blocked: 0, info: 5 });
+  assert.deepEqual(rec.summary, { allowed: 1, refused: 0, blocked: 0, info: 5, unverified: 0 });
   assert.equal(rec.rows.filter((r) => r.layer === 'agent').every((r) => r.detail.poisonLanded === false && r.outcome === 'info'), true);
 }));
 
@@ -126,6 +126,18 @@ test('a frozen clock: every event keeps the one real time (no invented bumps) an
     assert.equal(new Set(rows.map((r) => r.at)).size, 1);
     assert.equal(rec.window.from, rec.window.to);
     assert.deepEqual(rows.map((r) => r.layer), ['resource', 'resource', 'gateway', 'gateway', 'agent']);
+  }, { clock });
+});
+
+test('rows that share a time keep the order the events were written in (specialist, approval, verdict, generalist)', async () => {
+  let t = Date.parse('2026-11-22T10:00:00.000Z');
+  const clock = () => { const v = t; t += 250; return v; };
+  await withServer(async ({ post, lines }) => {
+    await runBoth(post, 'run-o1', { variant: 'clean', stage: 'first' });
+    const rec = await record(post, 'run-o1');
+    const pinned = rec.rows.filter((r) => r.origin === 'simulated' && r.detail.client === 'pinned');
+    assert.deepEqual(pinned.map((r) => `${r.layer}:${r.outcome}`), ['resource:info', 'gateway:info', 'gateway:allowed', 'agent:info']);
+    assert.deepEqual(lines.slice(2).map((l) => l.match(/actor=([a-z-]+) outcome=([a-z-]+)/).slice(1).join(':')), ['hostile-specialist:served', 'pinned-client:approved', 'pinned-client:passed', 'generalist-behind-pin:delegated']);
   }, { clock });
 });
 
