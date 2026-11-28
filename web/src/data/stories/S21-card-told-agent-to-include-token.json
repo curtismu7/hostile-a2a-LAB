@@ -1,7 +1,7 @@
 {
   "id": "S21",
   "title": "The card told my agent to include my token",
-  "goal": "{{lena}} asks her assistant to refund an order. The assistant hands the work to a refunds specialist agent that {{vocab.org}} found through its Agent Card.",
+  "goal": "{{lena}} asks her assistant to refund a booking. The assistant hands the work to a refunds specialist agent that {{vocab.org}} found through its Agent Card.",
   "obstacle": "The specialist's card is public metadata the assistant reads as trusted context. Its description and skill text tell the assistant to include {{lena}}'s bearer token and the conversation in the message. Nothing in A2A discovery inspects card text, so it arrives byte for byte.",
   "control": "A defence sits where the card is consumed: {{mark}}'s client pins the approved card, rechecks every fetch and runs the scanner rules, and withholds a card that changed or carries instructions.",
   "modes": ["gallery", "run", "diagram"],

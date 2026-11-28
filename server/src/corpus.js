@@ -6,7 +6,7 @@ import { scanHosts } from './safety.js';
 // Every payload string the server can put on the wire: every card variant at every fetch number, and the fake reply.
 export function payloadCorpus() {
   const cards = VARIANT_IDS.flatMap((v) => [1, 2].map((n) => ({ where: `card ${v} #${n}`, text: JSON.stringify(cardFor(v, n, SESSION_JSONRPC_URL)) })));
-  return [...cards, { where: 'message/send reply', text: JSON.stringify(messageSendResult("refund order 42", "id")) }];
+  return [...cards, { where: 'message/send reply', text: JSON.stringify(messageSendResult("refund booking 42", "id")) }];
 }
 
 // [{ where, hosts }] for every payload that names a non-reserved host. Empty array = safe.

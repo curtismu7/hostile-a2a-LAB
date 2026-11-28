@@ -18,5 +18,8 @@ Tier: Demo. A deliberately hostile A2A specialist serves a poisoned Agent Card; 
 - Do not use `crypto.generateKeyPairSync('ec')` or async EC `generateKeyPair` (SIGABRT on Node 20 CI); use `createECDH` + `createPrivateKey`.
 - No AI attribution anywhere (owner, 2026-11-07): no Co-Authored-By trailer and no "Generated with" line in commits, PR bodies or files; CI runs `scripts/check-no-ai-attribution.sh`.
 
+## Default story
+The default vertical is `airlines` (AirGuard Airlines, a fictional airline; `DEFAULT_VERTICAL` in `web/src/story/stories.js`). The server has no packs: the card fixtures are a refunds specialist that refunds a booking. Generic and Banking stay selectable. Retired names (Meridian Air, Skyline Air, Northwind, Contoso, Tessera, Fabrikam, Harbor, Vellum, Super Banking) are guarded by tests; do not bring them back.
+
 ## Shelf
 `docs/shelf-entry.json` registers this app. Run the parent's `scripts/check-drift.sh <this clone>` before a PR.

@@ -29,7 +29,8 @@ test("the steps are one exclusive selector: a named group, aria-pressed on the s
 
 test("the vertical re-skins the story and is remembered", async () => {
   render(<StoryPanel mode="roundtrip" />);
-  expect(screen.getByText(/Story S22 · Generic/)).toBeInTheDocument();
+  expect(screen.getByText(/Story S22 · AirGuard Airlines/)).toBeInTheDocument();
+  expect(screen.getByText(/reviews the refunds specialist.s Agent Card for AirGuard Airlines/)).toBeInTheDocument();
   await userEvent.selectOptions(screen.getByLabelText("Vertical"), "banking");
   expect(screen.getByText(/Story S22 · Super Banking/)).toBeInTheDocument();
   expect(screen.getByText(/reviews the refunds specialist.s Agent Card for the bank/)).toBeInTheDocument();
@@ -48,4 +49,14 @@ test("the panel hides, stays open in presenter mode, and a page with no story re
   expect(screen.getByRole("button", { name: /talk track/ })).toBeDisabled();
   rerender(<StoryPanel mode="limits" />);
   expect(container).toBeEmptyDOMElement();
+});
+
+test("a saved generic or banking choice keeps working, and a saved unknown id falls back to AirGuard Airlines", async () => {
+  localStorage.setItem("hostile-a2a.story.vertical", "generic");
+  render(<StoryPanel mode="roundtrip" />);
+  expect(screen.getByText(/Story S22 · Generic/)).toBeInTheDocument();
+  cleanup();
+  localStorage.setItem("hostile-a2a.story.vertical", "retired-pack");
+  render(<StoryPanel mode="roundtrip" />);
+  expect(screen.getByText(/Story S22 · AirGuard Airlines/)).toBeInTheDocument();
 });

@@ -43,7 +43,7 @@ Other variable: `HOST_PORT=4750` (Docker host port). Keep both inside 4700-4799.
 Built and tested: the hostile server (wire output checked byte for byte against the source), the offline delegating
 generalist, the pinned-card client, the card scanner rules, the API and `GET /api/health` (`demo-health/1`), the web UI
 (poison gallery, side-by-side delegation run, card round trip with field diff, honest limits, ReactFlow diagram with
-movable boxes / Simulate / Reset / speed, stories S21 and S22 with three vertical packs, light and dark), Docker,
+movable boxes / Simulate / Reset / speed, stories S21 and S22 with three vertical packs (the default is AirGuard Airlines, a fictional airline; Generic and Banking stay selectable), light and dark), Docker,
 the SE shelf entry, the Learning Hub content pack, and a browser e2e script.
 
 Last run: 75 server tests, 27 web tests and 14 script tests pass (`npm test`), `npm run build` passes, and `npm run e2e`

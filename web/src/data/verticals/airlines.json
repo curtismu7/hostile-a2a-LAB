@@ -1,24 +1,24 @@
 {
   "id": "airlines",
-  "displayName": "Airline",
-  "tagline": "Good Leads The Way",
-  "source": "Names and colors from the ID-JAG kit vertical pack; vocab rewritten for this demo",
+  "displayName": "AirGuard Airlines",
+  "tagline": "Every agent vetted before takeoff",
+  "source": "AirGuard Airlines is a fictional airline (the family's default story); colors from the ID-JAG kit airline pack; vocab rewritten for this demo",
   "brand": {
     "primary": "#002244",
     "headerStart": "#002244",
     "headerEnd": "#1414D2"
   },
   "vocab": {
-    "org": "the airline",
+    "org": "AirGuard Airlines",
     "desk": "the revenue accounting team"
   },
   "cast": {
     "lena": {
-      "name": "Lena",
-      "role": "Employee who uses an AI assistant"
+      "name": "Emma",
+      "role": "Passenger-services employee who uses an AI assistant"
     },
     "mark": {
-      "name": "Mark",
+      "name": "Priya",
       "role": "Security reviewer who approves agents"
     }
   }

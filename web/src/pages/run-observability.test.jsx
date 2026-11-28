@@ -29,7 +29,7 @@ test("after a run the record the server built is shown under the result, labelle
   expect(screen.getByTestId("ro-basis")).toHaveTextContent("Simulated");
   const bodies = (path) => f.mock.calls.filter(([url]) => url === path).map(([, init]) => JSON.parse(init.body));
   const [first, second] = bodies("/api/run-victim");
-  expect(first).toMatchObject({ task: "Please refund my last order", stage: "later", variant: "poisoned" });
+  expect(first).toMatchObject({ task: "Please refund my last booking", stage: "later", variant: "poisoned" });
   expect(first.runId).toMatch(/^run-[a-z0-9]+-[a-z0-9]+$/);
   expect(second.runId).toBe(first.runId);
   expect(bodies("/api/run-observability")).toEqual([{ runId: first.runId }]);
