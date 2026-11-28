@@ -15,11 +15,18 @@ import { HELP_SECTIONS } from "./helpContent";
 import { pageTalkSteps } from "./story/StoryPanel";
 import { getInfo, resetSessions, setMode } from "./lib/api.js";
 import PrivilegeCheck from "./privilege-check/PrivilegeCheck.jsx";
+import ModeModal from "./mode-modal/ModeModal.jsx";
 
 // Version for the TopMenu About button: read once from the lab root package.json.
 const LAB_VERSION = (() => { try { return JSON.parse(fs.readFileSync(new URL("../../package.json", import.meta.url), "utf8")).version || null; } catch { return null; } })();
 
-// Hash-routed pages (no router dependency). The banner is always on screen: this server is hostile on purpose.
+// The Real-or-mock modal's lines (shared mode-modal). The old banner also said, on every page, that this agent is hostile on purpose: that sentence lives here now.
+export const MODE_LINES = {
+  mock: "This A2A agent is deliberately hostile. Every card and reply is shown as inert text, the generalist only returns the message it would send, and nothing is sent anywhere.",
+  real: "This A2A agent is still deliberately hostile and every card and reply stays inert text. Only the Privilege gateway check is live: one real tools/list and one refused tools/call probe through the door.",
+};
+
+// Hash-routed pages (no router dependency).
 export const PAGES = [
   ["gallery", "Poison gallery", Gallery],
   ["run", "Run the delegation", Run],
@@ -94,15 +101,12 @@ export default function App() {
         </span>
       </header>
       <main className="page" id="main" tabIndex={-1}>
-
-        <div className="banner" role="note" data-testid="banner" data-state={source === "real" ? "live" : "mock"}>
-          <strong>{source === "real" ? "REAL mode. " : "MOCK mode. "}This A2A agent is deliberately hostile.</strong> Every card is shown as inert text, its replies are inert, and the generalist only returns the message it would send. Nothing is sent anywhere, and every off-box address is a reserved <code>.invalid</code> or example name.
-        </div>
         {page === "run" || page === "roundtrip" || page === "diagram" ? <PrivilegeCheck /> : <PrivilegeCheck primaryRetry />}
         <Page present={present} theme={theme} source={source} />
         {notice && <p className="muted small" role="status" data-testid="notice">{notice}</p>}
         <p className="muted small" data-admin-only>The server serves cards and never scores or blocks. Pinning notices change; it does not judge content. Card signatures are not verified here.</p>
       </main>
+      <ModeModal mode={source} lines={MODE_LINES} storageKey="ha-mode" />
       <TalkTrackDialog isOpen={talkOpen} onClose={() => setTalkOpen(false)} talk={pageTalkSteps()} />
       <HelpDialog isOpen={helpOpen} onClose={() => setHelpOpen(false)} sections={HELP_SECTIONS} docsUrl="https://github.com/curtismu7/hostile-a2a-LAB#readme" />
 

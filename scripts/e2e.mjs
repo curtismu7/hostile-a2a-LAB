@@ -46,6 +46,18 @@ try {
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
 
+  // The Real-or-mock modal: shown on a fresh load (MOCK, the hostile-on-purpose line), closed by "Got it", and not back after a reload in the
+  // same session. Every step after this one runs with it dismissed. The old banner is gone.
+  await go('gallery');
+  await page.getByTestId('mode-modal').waitFor();
+  check((await page.getByTestId('mode-modal').getAttribute('data-mode')) === 'mock', 'the modal opens on MOCK');
+  check((await text('mode-modal')).toLowerCase().includes('deliberately hostile'), 'the modal says the agent is hostile on purpose');
+  await page.getByTestId('mode-modal-ok').click();
+  await page.reload();
+  await page.getByTestId('poison-card-rug-pull').waitFor();
+  check((await page.getByTestId('mode-modal').count()) === 0, 'no modal after a reload in the same session');
+  check((await page.getByTestId('banner').count()) === 0, 'no banner');
+
   // Keyboard order: the skip link is the first stop, then the nav; Enter on it moves focus to <main>.
   await go('gallery');
   await page.keyboard.press('Tab');
@@ -56,7 +68,6 @@ try {
   // Gallery
   await go('gallery');
   await page.getByTestId('poison-card-rug-pull').waitFor();
-  check((await text('banner')).toLowerCase().includes('deliberately hostile'), 'banner says the agent is hostile on purpose');
   check((await page.locator('[data-testid^="poison-"]').count()) === 11, 'gallery shows eleven poisons');
   check((await text('poison-hidden-rug-pull')).includes('Caught by pinning'), 'the hidden rug-pull row is caught by pinning');
   check((await text('poison-plain-language-steering')).includes('Neither'), 'plain-language steering is caught by neither');
