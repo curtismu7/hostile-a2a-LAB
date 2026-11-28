@@ -5,8 +5,8 @@
 import fs from 'node:fs';
 
 export const DEFAULT_CUSTOMER = {
-  name: 'Hostile MCP LAB',
-  tagline: 'The tool list changed overnight',
+  name: 'AirGuard Airlines',
+  tagline: 'An Agent Card is untrusted input',
   cast: {},        // { [castId]: "Display Name" } — overrides vertical.cast names in the story panel
   vocabulary: {},  // { [term]: "Replacement" } — overrides vertical.vocab in the story panel
   warnings: [],

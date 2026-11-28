@@ -1,6 +1,6 @@
 // Copied from hostile-mcp (web/src/story/StoryPanel.jsx). Not imported across repos.
 import React, { useMemo, useState } from "react";
-import { STORIES, VERTICALS, storyForMode, verticalById } from "./stories.js";
+import { STORIES, VERTICALS, DEFAULT_VERTICAL, storyForMode, verticalById } from "./stories.js";
 import { fillAll } from "./fill.js";
 
 // Adapted from the ID-JAG kit StoryPanel: the talk track for the page, re-skinned by the chosen vertical, with the
@@ -12,7 +12,7 @@ const write = (k, v) => { try { localStorage.setItem(k, v); } catch { /* storage
 
 export default function StoryPanel({ mode, present = false }) {
   const raw = storyForMode(mode);
-  const [verticalId, setVerticalId] = useState(() => read(KEYS.vertical, "generic"));
+  const [verticalId, setVerticalId] = useState(() => read(KEYS.vertical, DEFAULT_VERTICAL));
   const [path, setPath] = useState(() => (read(KEYS.path, "happy") === "blocked" ? "blocked" : "happy"));
   const [open, setOpen] = useState(() => read(KEYS.open, "open") !== "closed");
   const [active, setActive] = useState(null);
@@ -86,7 +86,7 @@ export default function StoryPanel({ mode, present = false }) {
 
 /** The page's stories flattened into TalkTrackDialog steps (owner 2026-11-17: one pop-out talk track per page). */
 export function pageTalkSteps() {
-  const vertical = verticalById((() => { try { return localStorage.getItem(KEYS.vertical); } catch { return null; } })() || "generic");
+  const vertical = verticalById((() => { try { return localStorage.getItem(KEYS.vertical); } catch { return null; } })() || DEFAULT_VERTICAL);
   return STORIES.flatMap((raw) => {
     const story = fillAll(raw, vertical);
     return [

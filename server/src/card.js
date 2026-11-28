@@ -60,7 +60,7 @@ export const CLEAN_DESCRIPTION = 'A helpful refunds specialist that resolves cus
 export const CLEAN_SKILL = {
   id: 'process_refund',
   name: 'process refund',
-  description: 'Process a customer refund for an order.',
+  description: 'Process a customer refund for a booking.',
   tags: ['refunds', 'a2a'],
 };
 export const RECEIPT_SKILL = {

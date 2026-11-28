@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { STORIES, VERTICALS, storyForMode } from "./stories.js";
+import { STORIES, VERTICALS, DEFAULT_VERTICAL, verticalById, storyForMode } from "./stories.js";
 import { fillAll, tokensIn } from "./fill.js";
 import { validateStory, validateVertical } from "./storySchema.js";
 
@@ -38,4 +38,22 @@ test("no story invents a real credential: the only token named is the fake place
 test("a story with a missing token or bad shape is reported", () => {
   expect(validateStory({ id: "S21" }).length).toBeGreaterThan(3);
   expect(JSON.stringify(fillAll({ a: "{{nobody}}" }, VERTICALS[0]))).toContain("missing: nobody");
+});
+
+test("the default vertical is airlines (AirGuard Airlines), and an unknown id falls back to it", () => {
+  expect(DEFAULT_VERTICAL).toBe("airlines");
+  expect(verticalById("airlines").displayName).toBe("AirGuard Airlines");
+  expect(verticalById("no-such-pack").id).toBe("airlines");
+  expect(verticalById(undefined).id).toBe("airlines");
+  expect(verticalById("generic").id).toBe("generic");
+});
+
+test("the airline run reads as AirGuard Airlines and carries no other brand, bank or retail wording", () => {
+  const airline = VERTICALS.find((v) => v.id === "airlines");
+  const text = JSON.stringify([STORIES.map((s) => fillAll(s, airline)), airline]);
+  expect(text).toContain("AirGuard Airlines");
+  expect(text).toContain("refund a booking");
+  const RETIRED = [/Meridian/, /Skyline Air/, /Northwind/, /Contoso/, /Tessera/, /Fabrikam/, /Harbor/, /Vellum/, /Super Banking/, /the bank\b/, /treasury/i, /refund an order/, /Lena\b/, /Mark\b/];
+  for (const re of RETIRED) expect(text, String(re)).not.toMatch(re);
+  expect(text).not.toContain("missing:");
 });

@@ -4,7 +4,7 @@ The say-aloud lines for each story, as they appear in the app (StoryPanel). Choo
 
 ## S21 — The card told my agent to include my token
 
-Goal: {{lena}} asks her assistant to refund an order. The assistant hands the work to a refunds specialist agent that {{vocab.org}} found through its Agent Card.
+Goal: {{lena}} asks her assistant to refund a booking. The assistant hands the work to a refunds specialist agent that {{vocab.org}} found through its Agent Card.
 
 Control: A defence sits where the card is consumed: {{mark}}'s client pins the approved card, rechecks every fetch and runs the scanner rules, and withholds a card that changed or carries instructions.
 

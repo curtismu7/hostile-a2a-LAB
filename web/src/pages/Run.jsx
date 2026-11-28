@@ -8,7 +8,7 @@ import StoryPanel from "../story/StoryPanel.jsx";
 import RunObservability from "../run-observability/RunObservability.jsx";
 
 export const TASKS = [
-  { text: "Please refund my last order", note: "matches the refund skill" },
+  { text: "Please refund my last booking", note: "matches the refund skill" },
   { text: "Sort out my billing", note: "matches no skill" },
   { text: "Export a receipt for my refund", note: "matches the receipt skill" },
 ];

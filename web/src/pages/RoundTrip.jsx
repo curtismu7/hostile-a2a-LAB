@@ -8,10 +8,10 @@ import StoryPanel from "../story/StoryPanel.jsx";
 import { MESSAGE_HOT, outcome } from "./Run.jsx";
 
 export const CHANGES = [
-  { id: "rug-pull", label: "Instructions appear in the description and the skill", task: "Please refund my last order" },
-  { id: "hidden-rug-pull", label: "An invisible instruction and a look-alike letter appear", task: "Please refund my last order" },
+  { id: "rug-pull", label: "Instructions appear in the description and the skill", task: "Please refund my last booking" },
+  { id: "hidden-rug-pull", label: "An invisible instruction and a look-alike letter appear", task: "Please refund my last booking" },
   { id: "skill-added", label: "A second skill is added", task: "Export a receipt for my refund" },
-  { id: "origin-mismatch", label: "The url moves to another origin", task: "Please refund my last order" },
+  { id: "origin-mismatch", label: "The url moves to another origin", task: "Please refund my last booking" },
 ];
 
 function CardBlock({ card }) {
