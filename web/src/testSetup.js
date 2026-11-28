@@ -9,6 +9,9 @@ Object.defineProperties(HTMLElement.prototype, {
   offsetHeight: { configurable: true, get() { return 80; } },
 });
 
+// The Real-or-mock modal remembers its dismissal in sessionStorage for the browser session; every test starts a fresh one.
+afterEach(() => { try { sessionStorage.clear(); } catch { /* storage blocked */ } });
+
 // Some Node versions expose a half-working global localStorage that shadows jsdom's; use a plain in-memory one.
 if (typeof globalThis.localStorage?.clear !== "function") {
   const store = new Map();

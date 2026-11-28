@@ -8,26 +8,29 @@ import { catalog, mockFetch } from "./test/fixtures.js";
 beforeEach(() => { localStorage.clear(); window.location.hash = ""; vi.stubGlobal("fetch", vi.fn(mockFetch({ "GET /api/catalog": catalog }))); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); delete document.documentElement.dataset.theme; delete document.documentElement.dataset.present; });
 
-test("the hostile-server banner and the skip link are on every page", async () => {
+test("the mode modal carries the hostile-on-purpose line over every page, the old banner is gone, and the skip link is on every page", async () => {
   render(<App />);
-  expect(screen.getByTestId("banner")).toHaveTextContent(/deliberately hostile/i);
-  expect(screen.getByTestId("banner")).toHaveTextContent(/inert/i);
+  expect(screen.getByTestId("mode-modal")).toHaveTextContent(/deliberately hostile/i);
+  expect(screen.getByTestId("mode-modal")).toHaveTextContent(/inert/i);
+  expect(screen.queryByTestId("banner")).toBeNull();
+  expect(document.querySelector("main > .banner")).toBeNull();
   expect(screen.getByRole("link", { name: "Skip to content" })).toHaveAttribute("href", "#main");
   for (const [id, label] of PAGES) {
     window.location.hash = `#/${id}`;
     window.dispatchEvent(new HashChangeEvent("hashchange"));
     expect(await screen.findByRole("link", { name: label })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByTestId("banner")).toBeInTheDocument();
+    expect(screen.getByTestId("mode-modal")).toBeInTheDocument();
+    expect(screen.queryByTestId("banner")).toBeNull();
   }
 });
 
-test("the standard shell: a shell bar, the mock banner first in main, one h1 that names the page", async () => {
+test("the standard shell: a shell bar, the MOCK modal, one h1 that names the page", async () => {
   render(<App />);
   expect(document.querySelectorAll("header.shell-bar")).toHaveLength(1);
   const main = screen.getByRole("main");
-  expect(main.firstElementChild).toBe(screen.getByTestId("banner"));
-  expect(screen.getByTestId("banner")).toHaveTextContent(/MOCK mode/);
-  expect(screen.getByTestId("banner")).toHaveAttribute("data-state", "mock");
+  expect(main.contains(screen.getByTestId("mode-modal"))).toBe(false); // the modal sits beside main, over the page
+  expect(screen.getByTestId("mode-modal")).toHaveTextContent(/MOCK/);
+  expect(screen.getByTestId("mode-modal")).toHaveAttribute("data-mode", "mock");
   const titles = [["gallery", "Card poison gallery"], ["run", "Run the delegation"], ["roundtrip", "Card round trip: the agent changed overnight"], ["limits", "Honest limits"], ["diagram", "How the pin sits in the path"]];
   for (const [id, title] of titles) {
     window.location.hash = `#/${id}`;
